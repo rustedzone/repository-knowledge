@@ -1,0 +1,17 @@
+{
+  "$schema": "schemas/repository.schema.json",
+  "schema_version": "1.0",
+  "repository": {
+    "name": "REPLACE_WITH_REPOSITORY_NAME",
+    "kind": "unknown",
+    "owners": []
+  },
+  "documentation": {
+    "index": "docs/index.md",
+    "generated_inventory": "docs/repository-inventory.md"
+  },
+  "capabilities": [],
+  "ci": {
+    "enforcement": "advisory"
+  }
+}

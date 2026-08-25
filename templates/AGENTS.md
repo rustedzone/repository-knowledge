@@ -1,0 +1,9 @@
+<!-- repository-knowledge:begin managed; toolkit replaces only this block -->
+## Repository knowledge lifecycle
+
+For repository-related work, use the `repository-knowledge` skill before assessing or planning the change. Start at `docs/index.md`, load only relevant knowledge, and verify material claims against repository evidence using the precedence in `.repo-knowledge/policy/contract.json`.
+
+After implementation and validation, assess documentation impact. End every material change with either updated documentation or a justified `documentation impact: not required` decision. Ask for human validation when evidence conflicts, requirements are materially ambiguous, business semantics cannot be inferred safely, or a destructive documentation change is proposed.
+
+Do not treat generated or stale documentation as stronger than executable behavior, schemas, migrations, effective configuration, or source implementation. Preserve requirement-only and historical material unless there is an explicit decision to change it.
+<!-- repository-knowledge:end managed -->

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/repository-knowledge/contract.schema.json",
+  "type": "object",
+  "required": ["contract_version", "evidence_precedence", "claim_states", "operations", "ownership"],
+  "properties": {
+    "contract_version": {"type": "string"},
+    "evidence_precedence": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "claim_states": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "string"}},
+    "operations": {"type": "array", "items": {"type": "string"}},
+    "documentation_impact_outcomes": {"type": "array", "items": {"enum": ["required", "not_required"]}},
+    "ownership": {"type": "object"}
+  },
+  "additionalProperties": true
+}

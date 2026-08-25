@@ -1,0 +1,6 @@
+/dist/
+/repo-knowledge
+/coverage.out
+.DS_Store
+__pycache__/
+*.py[cod]

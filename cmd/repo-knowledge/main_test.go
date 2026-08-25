@@ -1,0 +1,135 @@
+package main
+
+import (
+	"bytes"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/rustedzone/repository-knowledge/internal/toolkit"
+)
+
+func TestRunVersion(t *testing.T) {
+	t.Parallel()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{"--version"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("run(--version) code = %d, stderr = %q", code, stderr.String())
+	}
+	if !strings.HasPrefix(stdout.String(), "repo-knowledge ") {
+		t.Fatalf("run(--version) output = %q", stdout.String())
+	}
+}
+
+func TestRunHelp(t *testing.T) {
+	t.Parallel()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{"help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("run(help) code = %d", code)
+	}
+	if !strings.Contains(stdout.String(), "Commands:") {
+		t.Fatalf("run(help) output = %q", stdout.String())
+	}
+}
+
+func TestRunInstallWithMultipleAgentAdapters(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{
+		"install",
+		"--target", root,
+		"--agent", "claude-code",
+		"--agent", "antigravity-ide",
+		"--agent", "cursor",
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run(install) code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, relative := range []string{
+		".claude/skills/repository-knowledge/SKILL.md",
+		".agents/skills/repository-knowledge/SKILL.md",
+		".claude/rules/repository-knowledge.md",
+		".agents/rules/repository-knowledge.md",
+		".cursor/skills/repository-knowledge/SKILL.md",
+		".cursor/rules/repository-knowledge.mdc",
+	} {
+		path := filepath.Join(root, filepath.FromSlash(relative))
+		if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+			t.Fatalf("installed adapter file %s: info = %v, error = %v", relative, info, err)
+		}
+	}
+}
+
+func TestRunInstallAllAgents(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{"install", "--target", root, "--all-agents"}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run(install --all-agents) code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, relative := range []string{
+		"AGENTS.md",
+		".agents/rules/repository-knowledge.md",
+		".claude/rules/repository-knowledge.md",
+		".cursor/rules/repository-knowledge.mdc",
+	} {
+		path := filepath.Join(root, filepath.FromSlash(relative))
+		if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
+			t.Fatalf("installed adapter file %s: info = %v, error = %v", relative, info, err)
+		}
+	}
+}
+
+func TestRunRejectsAllAgentsWithExplicitAgent(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{"install", "--target", root, "--all-agents", "--agent", "cursor"}, &stdout, &stderr)
+	if code != 2 || !strings.Contains(stderr.String(), "--all-agents cannot be combined with --agent") {
+		t.Fatalf("run(conflicting flags) code = %d, stderr = %q", code, stderr.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, ".repo-knowledge", "toolkit.json")); !os.IsNotExist(err) {
+		t.Fatalf("conflicting flags wrote toolkit manifest; stat error = %v", err)
+	}
+}
+
+func TestInstallHelpDocumentsAllAgents(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{"install", "--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("run(install --help) code = %d", code)
+	}
+	if !strings.Contains(stderr.String(), "all-agents") {
+		t.Fatalf("install help does not document --all-agents: %q", stderr.String())
+	}
+}
+
+func TestUpdateHelpDocumentsRetainedAgentSelection(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{"update", "--help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("run(update --help) code = %d", code)
+	}
+	if !strings.Contains(stderr.String(), "all-agents") || !strings.Contains(stderr.String(), "retain installed selection") {
+		t.Fatalf("update help does not explain adapter preferences: %q", stderr.String())
+	}
+}
+
+func TestRebuildSummaryDoesNotClaimSemanticDocumentation(t *testing.T) {
+	result := toolkit.RebuildResult{
+		Proposal:                      "/tmp/proposal.md",
+		Applied:                       true,
+		GeneratedInventory:            "/tmp/repository-inventory.md",
+		ArtifactKind:                  "structural_inventory",
+		SemanticDocumentationComplete: false,
+		NextStep:                      "inspect evidence and write repository guides",
+	}
+	output := summarize("rebuild", result)
+	if !strings.Contains(output, "structural inventory") || !strings.Contains(output, "does not generate semantic documentation") {
+		t.Fatalf("summarize(rebuild) output = %q", output)
+	}
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "schemas/repository.schema.json",
+  "schema_version": "1.0",
+  "repository": {
+    "name": "example-backend-service",
+    "kind": "service",
+    "owners": ["team-example"]
+  },
+  "documentation": {
+    "index": "docs/index.md",
+    "generated_inventory": "docs/repository-inventory.md"
+  },
+  "capabilities": [
+    {
+      "id": "public-api",
+      "documentation": ["docs/api/public-api.md"],
+      "evidence": ["api-contract/", "src/http/"]
+    },
+    {
+      "id": "persistence",
+      "documentation": ["docs/data/model.md"],
+      "evidence": ["migrations/", "src/persistence/"]
+    }
+  ],
+  "ci": {"enforcement": "advisory"}
+}

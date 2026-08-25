@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "id": "frontend-nextjs",
+  "revision": "1",
+  "description": "Next.js frontend documentation with stale prose, a static-intelligence trap, protected navigation, form state, and a BFF proxy.",
+  "fixture": "fixture",
+  "prompt": "prompt.md",
+  "rubric": "rubric.md",
+  "allowed_changes": [
+    "docs/**",
+    ".repo-knowledge/repository.json",
+    ".repo-knowledge/scan-state.json",
+    ".repo-knowledge/rebuild-proposal.md"
+  ],
+  "checks": [
+    {
+      "id": "baseline-guides",
+      "type": "paths_exist",
+      "paths": ["docs/index.md", "docs/repository-overview.md", "docs/architecture.md"]
+    },
+    {
+      "id": "semantic-doc-count",
+      "type": "minimum_files",
+      "glob": "docs/**/*.md",
+      "minimum": 7
+    },
+    {
+      "id": "docs-rebuilt",
+      "type": "changed_files_minimum",
+      "glob": "docs/**/*.md",
+      "minimum": 5
+    },
+    {
+      "id": "current-framework-version",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": ["React 19", "package.json", "package-lock.json"]
+    },
+    {
+      "id": "stale-framework-version-rejected",
+      "type": "not_contains",
+      "glob": "docs/**/*.md",
+      "patterns": ["React 18"]
+    },
+    {
+      "id": "static-intelligence-traced",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": ["static", "src/data/intelligence.json", "IntelligencePage"]
+    },
+    {
+      "id": "false-live-integration-rejected",
+      "type": "not_contains",
+      "glob": "docs/**/*.md",
+      "patterns": ["live Pega backend", "Pega intelligence API"]
+    },
+    {
+      "id": "frontend-mechanisms",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": [
+        "src/app/(protected)/layout.tsx",
+        "requireSession",
+        "useCheckPermission",
+        "src/features/users/UserForm.tsx",
+        "userSchema",
+        "src/pages/api/[...paths]/index.ts"
+      ]
+    },
+    {
+      "id": "source-derived-examples",
+      "type": "source_examples_minimum",
+      "glob": "docs/**/*.md",
+      "minimum": 3
+    },
+    {
+      "id": "evidence-anchors",
+      "type": "existing_evidence_minimum",
+      "glob": "docs/**/*.md",
+      "minimum": 10
+    },
+    {
+      "id": "verified-routes",
+      "type": "capabilities_minimum",
+      "path": ".repo-knowledge/repository.json",
+      "minimum": 4
+    },
+    {
+      "id": "documentation-links",
+      "type": "markdown_links_valid",
+      "glob": "docs/**/*.md"
+    },
+    {
+      "id": "fixture-source-preserved",
+      "type": "protected_files_unchanged"
+    }
+  ]
+}

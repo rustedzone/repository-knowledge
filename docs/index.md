@@ -1,0 +1,76 @@
+# Repository knowledge index
+
+This is the routing map for the repository-knowledge toolkit itself.
+
+## Architecture and contract
+
+Read when:
+- changing ownership boundaries, evidence precedence, policy, adapters, or lifecycle behavior;
+- deciding whether logic belongs in the shared contract, an adapter, or a consuming repository.
+
+Knowledge:
+- [Architecture](architecture.md)
+- [Configuration and contract](configuration.md)
+
+Evidence anchors:
+- `policy/`
+- `schemas/`
+- `assets.go`
+- `internal/toolkit/`
+
+## Installation and distribution
+
+Read when:
+- changing installed files, update behavior, version pinning, or GitLab integration;
+- testing the toolkit against another repository.
+
+Knowledge:
+- [Installation](installation.md)
+- [Testing](testing.md)
+
+Evidence anchors:
+- `internal/toolkit/install.go`
+- `cmd/repo-knowledge/main.go`
+- `Makefile`
+- `templates/`
+- `adapters/gitlab/`
+
+## Agent behavior
+
+Read when:
+- changing how Codex, Claude Code, Antigravity IDE, or Cursor loads, verifies, assesses, scans, audits, rebuilds, or reconciles knowledge.
+
+Knowledge:
+- [Skill entrypoint](../skills/repository-knowledge/SKILL.md)
+- [Human-readable documentation generation](../skills/repository-knowledge/references/documentation-generation.md)
+- [Documentation quality and implementation readiness](../skills/repository-knowledge/references/documentation-quality.md)
+- [Repository type profiles and coverage](../skills/repository-knowledge/references/repository-type-profiles.md)
+- [Claim-specific sources of truth](../skills/repository-knowledge/references/source-of-truth.md)
+- [Operation guidance](../skills/repository-knowledge/references/operations.md)
+
+Evidence anchors:
+- `skills/repository-knowledge/`
+- `policy/contract.json`
+
+## Agent evaluation
+
+Read when:
+- changing generation instructions or assessing whether an agent produces source-grounded, implementation-ready documentation;
+- reproducing frontend or layered-backend documentation regressions across Codex, Claude Code, Antigravity IDE, or Cursor.
+
+Knowledge:
+- [Agent evaluation workflow](../evals/README.md)
+- [Toolkit testing](testing.md)
+
+Evidence anchors:
+- `evals/cases/`
+- `internal/evalharness/`
+- `cmd/repo-knowledge-eval/`
+
+## Extension points
+
+Read when:
+- adding a new SCM adapter, deterministic detector, invariant, or agent integration.
+
+Knowledge:
+- [Extension guide](extension-guide.md)

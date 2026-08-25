@@ -1,0 +1,7 @@
+{
+  "$schema": "schemas/doc-impact.schema.json",
+  "schema_version": "1.0",
+  "change_fingerprint": "RUN_REPO_KNOWLEDGE_ACKNOWLEDGE_TO_POPULATE",
+  "impact": "not_required",
+  "reason": "Explain why the material diff does not change repository knowledge."
+}

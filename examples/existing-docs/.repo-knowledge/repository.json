@@ -1,0 +1,21 @@
+{
+  "$schema": "schemas/repository.schema.json",
+  "schema_version": "1.0",
+  "repository": {
+    "name": "example-existing-docs",
+    "kind": "mixed",
+    "owners": []
+  },
+  "documentation": {
+    "index": "docs/index.md",
+    "generated_inventory": "docs/generated/repository-inventory.md"
+  },
+  "capabilities": [
+    {
+      "id": "system-architecture",
+      "documentation": ["docs/system-overview.md"],
+      "evidence": ["components/", "deploy/"]
+    }
+  ],
+  "ci": {"enforcement": "advisory"}
+}

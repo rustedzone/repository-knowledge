@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version: '1.25.14'
+          cache: false
+
+      - name: Run tests, vet, and formatting checks
+        run: make check
+
+      - name: Run race-enabled tests
+        run: go test -race ./...
+
+      - name: Build both CLIs
+        run: |
+          make build
+          go build -trimpath -o /tmp/repo-knowledge-eval ./cmd/repo-knowledge-eval

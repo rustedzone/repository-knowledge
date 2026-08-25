@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/repository-knowledge/repository.schema.json",
+  "type": "object",
+  "required": ["schema_version", "repository", "documentation", "capabilities", "ci"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "repository": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "kind": {"type": "string"},
+        "owners": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "documentation": {
+      "type": "object",
+      "required": ["index"],
+      "properties": {
+        "index": {"type": "string"},
+        "generated_inventory": {"type": "string"}
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "documentation"],
+        "properties": {
+          "id": {"type": "string"},
+          "documentation": {"type": "array", "items": {"type": "string"}},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "required": ["enforcement"],
+      "properties": {"enforcement": {"enum": ["advisory", "acknowledgment", "enforced"]}}
+    }
+  },
+  "additionalProperties": true
+}

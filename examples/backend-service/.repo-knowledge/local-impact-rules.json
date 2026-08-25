@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "documentation_globs": [],
+  "ignored_globs": [],
+  "classifiers": [],
+  "required_doc_mappings": {
+    "api": ["docs/api/**"],
+    "persistence": ["docs/data/**"]
+  }
+}

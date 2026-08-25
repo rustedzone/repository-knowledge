@@ -1,0 +1,49 @@
+{
+  "$schema": "../schemas/contract.schema.json",
+  "contract_version": "1.0",
+  "evidence_precedence": [
+    "observed_runtime_behavior_and_executable_tests",
+    "schemas_migrations_and_effective_configuration",
+    "source_implementation",
+    "accepted_architecture_decisions",
+    "repository_documentation",
+    "agent_inference"
+  ],
+  "claim_states": {
+    "verified": "Directly supported by current repository evidence.",
+    "verified_stale": "A documented claim is objectively contradicted by current repository evidence.",
+    "inferred": "Strongly suggested by evidence but not explicit enough to guarantee.",
+    "requirement_only": "An explicit requirement not yet demonstrated by implementation.",
+    "historical": "Intentional historical context, including superseded architecture decisions.",
+    "unverified": "A claim exists but available evidence cannot confirm or reject it.",
+    "conflict": "Multiple authoritative-looking sources materially disagree.",
+    "unknown": "Intent or truth cannot currently be determined."
+  },
+  "operations": ["discover", "bootstrap", "load", "assess", "reconcile", "scan", "audit", "rebuild"],
+  "documentation_impact_outcomes": ["required", "not_required"],
+  "human_validation_required_when": [
+    "requirements_are_materially_ambiguous",
+    "authoritative_sources_materially_conflict",
+    "business_semantics_cannot_be_safely_inferred",
+    "a_new_architectural_decision_is_introduced",
+    "important_assumptions_cannot_be_verified",
+    "destructive_or_non_generated_documentation_changes_are_proposed"
+  ],
+  "human_validation_not_normally_required_when": [
+    "reading_or_routing_repository_knowledge",
+    "inspecting_repository_evidence",
+    "mechanically_refreshing_generated_knowledge",
+    "correcting_objectively_stale_references",
+    "recording_a_supported_no_impact_decision"
+  ],
+  "safety": {
+    "documentation_never_overrides_stronger_repository_evidence": true,
+    "requirements_and_historical_records_are_not_deleted_only_because_code_lacks_evidence": true,
+    "rebuild_defaults_to_proposal": true,
+    "ci_silently_commits_documentation": false
+  },
+  "ownership": {
+    "toolkit": ["skill", "default_policy", "schemas", "validators", "release_binaries", "ci_templates"],
+    "consumer": ["repository_metadata", "local_rules", "domain_knowledge", "documentation", "adrs", "scan_state", "impact_acknowledgments"]
+  }
+}

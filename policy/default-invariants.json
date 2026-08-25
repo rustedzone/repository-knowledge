@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "invariants": [
+    {
+      "id": "material-change-has-impact-decision",
+      "applies_when": "a material repository file changes",
+      "requirement": "the diff changes repository documentation or contains a matching documentation-impact acknowledgment",
+      "confidence": "objective",
+      "default_enforcement": "acknowledgment"
+    },
+    {
+      "id": "configured-capability-has-knowledge-route",
+      "applies_when": "repository.json declares a capability",
+      "requirement": "the capability names at least one existing documentation route",
+      "confidence": "objective",
+      "default_enforcement": "advisory"
+    },
+    {
+      "id": "architecture-change-has-decision-record",
+      "applies_when": "the repository declares an architecture decision as part of a change",
+      "requirement": "an ADR or equivalent decision record is added or updated",
+      "confidence": "semantic",
+      "default_enforcement": "advisory"
+    }
+  ]
+}

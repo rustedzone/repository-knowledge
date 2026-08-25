@@ -1,0 +1,149 @@
+# Changelog
+
+All notable changes follow Keep a Changelog. Versions follow Semantic Versioning.
+
+## [0.6.1] - 2026-08-26
+
+### Added
+
+- GitHub CI for tests, race detection, vet, formatting, and both CLI builds.
+- Attested GitHub release builds and a private vulnerability reporting policy.
+- Apache License 2.0 terms for public use, modification, contribution, and distribution.
+
+### Changed
+
+- The Go module and public installation examples now use the canonical `github.com/rustedzone/repository-knowledge` source identity.
+
+### Fixed
+
+- Root-anchored binary ignores no longer exclude `cmd/repo-knowledge/main.go`, and Finder metadata is ignored.
+- Version ordering now follows Semantic Versioning prerelease precedence, preventing a stable release from being treated as equal to its release candidate.
+
+## [0.6.0] - 2026-08-25
+
+### Added
+
+- `install --all-agents` and `update --all-agents` select every canonical prompt adapter with one flag.
+- Conflict validation rejects combining `--all-agents` with any explicit `--agent`, and tests cover fresh installation, update expansion, stable manifest ordering, help output, and the no-write error path.
+
+### Changed
+
+- Supported adapter names now have one ordered source used by validation and the all-agents preference, so future adapters can extend both consistently.
+- Installation, operations, architecture, extension, and smoke-test guidance documents all-agents and retained-update semantics.
+
+## [0.5.0] - 2026-08-25
+
+### Added
+
+- First-class Cursor support through an always-applied `.cursor/rules/repository-knowledge.mdc` project rule and `.cursor/skills/repository-knowledge/` Agent Skill.
+- Cursor-aware installation, update retention and switching, `doctor` validation, scan exclusion, documentation-impact exclusion, evaluation preparation, and consumer-rule preservation tests.
+
+### Changed
+
+- Compatibility, installation, architecture, testing, and operations guidance now covers all four supported prompt adapters: Codex, Claude Code, Antigravity IDE, and Cursor.
+
+## [0.4.4] - 2026-08-25
+
+### Added
+
+- Isolated frontend and layered-backend agent evaluation fixtures with deliberately stale prose, shallow documentation, and source-of-truth conflicts.
+- A developer-only Go evaluation runner that prepares fixtures for Codex, Claude Code, or Antigravity IDE and grades objective documentation properties without executing an agent command.
+- Semantic rubrics and trial-report guidance that keep implementation readiness, behavioral accuracy, and anti-hallucination review separate from deterministic keyword and artifact checks.
+
+### Changed
+
+- Generated overview and index guidance now includes a repository-specific newcomer mental model, reading path, and practical first action when supported by evidence.
+- Mermaid guidance now recommends only a small number of evidence-backed component, sequence, state, or data-flow diagrams when they materially improve understanding; diagrams remain non-scored polish and never replace semantic traces.
+
+## [0.4.3] - 2026-08-25
+
+### Added
+
+- Private coverage-ledger and trace-dossier workflow for each material capability or artifact lifecycle.
+- Named behavioral-flow requirements with concrete symbols, state effects, side effects, error propagation, tests, and extension patterns.
+- Stateful-model checks for transition writes and guards plus deletion analysis across database, application, and external synchronization behavior.
+- Generation-mode remediation loop and explicit read-only assessment mode.
+
+### Fixed
+
+- Generation and rebuild requests no longer stop after declaring existing documentation insufficient or ask permission to begin the already-requested work.
+- Layered backend documentation must explain concrete flow, dependency direction, trust boundaries, response/error handling, and recurring extension seams instead of cataloging packages and controllers.
+- A single incidental code example no longer qualifies as coverage for unrelated architecture patterns.
+
+## [0.4.2] - 2026-08-25
+
+### Added
+
+- Documentation quality gate covering unsupported speculation, mechanism-level capability depth, source-derived examples, and implementation readiness.
+- Frontend-specific requirements for concrete navigation/guard behavior, state ownership, query/mutation lifecycle, UI composition, forms/validation, BFF behavior, and test patterns.
+- Regression scenarios for speculative domain/integration prose, shallow frontend summaries, and onboarding examples.
+
+### Fixed
+
+- Domain glossaries and endpoint lists no longer qualify as completed domain documentation without verified rules, invariants, state transitions, permissions, side effects, failures, and tests where applicable.
+- Unknown behavior must now be recorded as an exact evidence gap instead of being padded with “likely,” “typically,” or “expected” explanations.
+- Full generation now requires concise current-source examples for recurring patterns that engineers need to copy or adapt.
+
+## [0.4.1] - 2026-08-24
+
+### Added
+
+- Claim-specific source-of-truth guidance for dependencies, runtime/toolchain versions, commands, architecture, interfaces, behavior, data, configuration, security, integrations, deployment, product intent, and historical rationale.
+- Regression scenarios for stale `CLAUDE.md`, README, route, command, and data-model claims.
+
+### Fixed
+
+- Documentation generation no longer treats agent instructions or existing prose as proof of current technical state when stronger manifest, lockfile, configuration, schema, test, or implementation evidence is available.
+- Version documentation now distinguishes declared ranges, exact lockfile resolution, runtime selection, and corroborating source usage.
+- Full generation reports stale prose outside the authorized documentation scope instead of copying it or rewriting it silently.
+
+## [0.4.0] - 2026-08-24
+
+### Added
+
+- Multi-label repository classification and documentation coverage profiles for backend, frontend, mobile/desktop, libraries/SDKs, CLIs, infrastructure/GitOps, data/ML, monorepos, embedded systems, documentation/configuration repositories, and unusual repository shapes.
+- A detailed page standard covering behavior, relationships, normal and failure flows, contracts, data lifecycle, operations, change guidance, tests, evidence, and uncertainty.
+- Coverage planning and completion gates for every material domain, interface, data model, integration, job, package, and operational surface.
+
+### Changed
+
+- Full documentation generation now requires a comprehensive, evidence-proportional knowledge library rather than the smallest useful guide set.
+- Repository shape is additive, allowing mixed repositories and monorepos to combine relevant documentation profiles.
+- Bootstrap and installation guidance now make focused domain/API/data/integration pages and explicit known-gap reporting part of the expected result.
+
+## [0.3.0] - 2026-08-24
+
+### Added
+
+- Evidence-backed semantic documentation workflow for requests to generate, improve, rebuild, or explain repository documentation.
+- Audit warning when a repository still has no verified capability routes.
+- Readable structural grouping and existing-document discovery in generated inventories.
+
+### Changed
+
+- `rebuild` now reports an explicit structural-inventory contract with `semantic_documentation_complete: false` and a semantic documentation next step.
+- Generated inventory Markdown is labeled as a discovery appendix, expands common source containers, and omits machine fingerprints from human-facing output.
+- The bootstrap index clearly identifies itself as incomplete until useful guides and routes are created.
+
+## [0.2.0] - 2026-08-23
+
+### Added
+
+- Proactive Claude Code support through a project rule and `.claude/skills/repository-knowledge/`.
+- Proactive Antigravity IDE support through a workspace rule and `.agents/skills/repository-knowledge/`.
+- Repeatable multi-agent installation plus `claude` and `antigravity` aliases.
+
+### Changed
+
+- `update` now retains the installed adapter selection when `--agent` is omitted and safely reconciles explicitly changed adapter selections.
+- `doctor` validates native rule and skill files for every selected adapter.
+
+## [0.1.0] - 2026-08-23
+
+### Added
+
+- Initial repository knowledge contract and Codex adapter.
+- Statically compiled Go CLI with embedded assets for install, update, scan, audit, rebuild, doctor, and documentation-impact validation.
+- Cross-platform release builds, checksums, and GitLab Generic Package Registry publishing.
+- GitLab CI include that downloads and verifies a pinned release binary for advisory, acknowledgment, and enforced modes.
+- Bootstrap templates and example configurations.

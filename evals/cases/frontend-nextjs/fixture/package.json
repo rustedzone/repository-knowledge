@@ -1,0 +1,17 @@
+{
+  "name": "repository-knowledge-eval-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "test": "jest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "formik": "2.4.6",
+    "next": "15.4.6",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "swr": "2.3.4",
+    "zod": "4.0.17"
+  }
+}

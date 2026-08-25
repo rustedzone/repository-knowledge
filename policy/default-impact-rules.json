@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "documentation_globs": [
+    "docs/**",
+    "README.md",
+    "CHANGELOG.md",
+    "**/README.md",
+    ".repo-knowledge/local-*.json"
+  ],
+  "ignored_globs": [
+    ".git/**",
+    ".repo-knowledge/policy/**",
+    ".repo-knowledge/scan-state.json",
+    ".repo-knowledge/rebuild-proposal.md",
+    ".repo-knowledge/doc-impact.json",
+    ".repo-knowledge/toolkit.json",
+    ".agents/skills/repository-knowledge/**",
+    ".agents/rules/repository-knowledge.md",
+    ".claude/skills/repository-knowledge/**",
+    ".claude/rules/repository-knowledge.md",
+    ".cursor/skills/repository-knowledge/**",
+    ".cursor/rules/repository-knowledge.mdc"
+  ],
+  "classifiers": [
+    {"id": "persistence", "tokens": ["migration", "schema", "database", "persistence"]},
+    {"id": "api", "tokens": ["api", "openapi", "endpoint", "controller", "resolver"]},
+    {"id": "authorization", "tokens": ["auth", "permission", "policy", "role"]},
+    {"id": "ui", "tokens": ["route", "page", "screen", "view", "ui"]},
+    {"id": "integration", "tokens": ["integration", "client", "webhook", "adapter"]},
+    {"id": "events_and_jobs", "tokens": ["event", "queue", "worker", "job", "schedule"]},
+    {"id": "configuration", "tokens": ["config", "environment", "env"]},
+    {"id": "deployment", "tokens": ["deploy", "infra", "terraform", "kubernetes", "helm", "docker"]},
+    {"id": "observability", "tokens": ["metric", "trace", "logging", "observability", "alert"]}
+  ]
+}

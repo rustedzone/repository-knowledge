@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0",
+  "id": "backend-clean-architecture",
+  "revision": "1",
+  "description": "Layered Go backend documentation with Oathkeeper identity, approval state transitions, Postgres/Redis, Keto synchronization, and misleading cascade prose.",
+  "fixture": "fixture",
+  "prompt": "prompt.md",
+  "rubric": "rubric.md",
+  "allowed_changes": [
+    "docs/**",
+    ".repo-knowledge/repository.json",
+    ".repo-knowledge/scan-state.json",
+    ".repo-knowledge/rebuild-proposal.md"
+  ],
+  "checks": [
+    {
+      "id": "baseline-guides",
+      "type": "paths_exist",
+      "paths": ["docs/index.md", "docs/repository-overview.md", "docs/architecture.md"]
+    },
+    {
+      "id": "semantic-doc-count",
+      "type": "minimum_files",
+      "glob": "docs/**/*.md",
+      "minimum": 7
+    },
+    {
+      "id": "docs-rebuilt",
+      "type": "changed_files_minimum",
+      "glob": "docs/**/*.md",
+      "minimum": 5
+    },
+    {
+      "id": "approval-request-trace",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": [
+        "OathkeeperIdentity",
+        "ApprovalController.Approve",
+        "ApprovalUsecase.Approve",
+        "PostgresApprovalRepository.Save",
+        "KetoTupleClient.ReplaceApprovalTuple",
+        "wrapper.OK"
+      ]
+    },
+    {
+      "id": "approval-lifecycle",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": ["PENDING", "APPROVED", "PROVISIONED", "FAILED", "transition"]
+    },
+    {
+      "id": "group-deletion-semantics",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": ["ON DELETE RESTRICT", "DeleteGroup", "DeleteGroupTuples"]
+    },
+    {
+      "id": "false-database-cascade-rejected",
+      "type": "not_contains",
+      "glob": "docs/**/*.md",
+      "patterns": ["database automatically cascades group deletion"]
+    },
+    {
+      "id": "architecture-extension-seams",
+      "type": "contains_all",
+      "glob": "docs/**/*.md",
+      "patterns": ["app.New", "NewApprovalController", "NewApprovalUsecase", "PostgresApprovalRepository", "wrapper.Error"]
+    },
+    {
+      "id": "source-derived-examples",
+      "type": "source_examples_minimum",
+      "glob": "docs/**/*.md",
+      "minimum": 4
+    },
+    {
+      "id": "evidence-anchors",
+      "type": "existing_evidence_minimum",
+      "glob": "docs/**/*.md",
+      "minimum": 12
+    },
+    {
+      "id": "verified-routes",
+      "type": "capabilities_minimum",
+      "path": ".repo-knowledge/repository.json",
+      "minimum": 4
+    },
+    {
+      "id": "documentation-links",
+      "type": "markdown_links_valid",
+      "glob": "docs/**/*.md"
+    },
+    {
+      "id": "fixture-source-preserved",
+      "type": "protected_files_unchanged"
+    }
+  ]
+}

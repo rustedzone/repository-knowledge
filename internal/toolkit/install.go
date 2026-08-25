@@ -229,7 +229,11 @@ func installEmbeddedManagedFiles(target string, adapters []string) ([]string, er
 		if err != nil {
 			return nil, err
 		}
-		if err := writeFileAtomic(path, data, 0o644); err != nil {
+		mode := fs.FileMode(0o644)
+		if strings.HasPrefix(source, "skills/repository-knowledge/scripts/") {
+			mode = 0o755
+		}
+		if err := writeFileAtomic(path, data, mode); err != nil {
 			return nil, err
 		}
 	}

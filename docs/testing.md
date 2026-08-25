@@ -47,7 +47,7 @@ Use fresh output directories for repeated trials. Track first-attempt `pass@1`; 
 make build
 TARGET_REPOSITORY="$(mktemp -d)"
 git -C "${TARGET_REPOSITORY}" init
-./repo-knowledge install --target "${TARGET_REPOSITORY}" --all-agents --source local --ref v0.6.1
+./repo-knowledge install --target "${TARGET_REPOSITORY}" --all-agents --source local --ref v0.7.0
 ./repo-knowledge doctor --target "${TARGET_REPOSITORY}"
 ./repo-knowledge scan --target "${TARGET_REPOSITORY}"
 ./repo-knowledge rebuild --target "${TARGET_REPOSITORY}"
@@ -80,7 +80,9 @@ git -C "${TARGET_REPOSITORY}" init
 21. Configure an enforced mapping such as `persistence -> docs/data/**`; verify an unrelated doc fails while a matching data doc passes.
 22. Put hand-maintained text at the configured generated-inventory path. Confirm `rebuild --apply` refuses to overwrite it.
 23. Run `update` with a newer binary and verify the selected adapters and consumer-owned files remain unchanged. Run `update --all-agents` from a subset installation and confirm it expands to every adapter. Switch back to an explicit subset and confirm only obsolete unmodified toolkit-managed adapter files are removed. Confirm an older binary is rejected without `--allow-downgrade`.
-24. Publish a tag and verify every binary against `SHA256SUMS`, then exercise the GitLab include from a separate project.
+24. Install an agent adapter into a disposable repository and confirm both bootstrap helpers are managed files, the Unix helper has mode `0755`, and `doctor` accepts their recorded digests.
+25. Run the Unix helper against local fake release assets: verify it refuses an unconfirmed non-interactive install, accepts only a pinned semantic tag, checks `SHA256SUMS`, writes only to a directory already on PATH, and installs mode `0755`. The GitHub CI Windows job must also pass its PowerShell dry-run; before release, exercise the full Windows checksum, confirmation, user-local destination, and explicit user-PATH cases.
+26. Publish a tag and verify every binary against `SHA256SUMS`, then exercise the missing-binary recovery from a separately cloned consumer and the GitLab include from a separate project.
 
 Before tagging, ensure `VERSION`, the adapter package version, documentation examples, and changelog agree.
 

@@ -47,6 +47,7 @@ Knowledge:
 - [Repository type profiles and coverage](../skills/repository-knowledge/references/repository-type-profiles.md)
 - [Claim-specific sources of truth](../skills/repository-knowledge/references/source-of-truth.md)
 - [Operation guidance](../skills/repository-knowledge/references/operations.md)
+- [Missing-binary bootstrap](../skills/repository-knowledge/references/binary-bootstrap.md)
 
 Evidence anchors:
 - `skills/repository-knowledge/`

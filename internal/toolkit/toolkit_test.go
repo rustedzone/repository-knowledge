@@ -20,6 +20,15 @@ func TestInstallBootstrapsBlankRepositoryAndPassesDoctor(t *testing.T) {
 	}
 	assertFile(t, filepath.Join(root, "docs", "index.md"))
 	assertFile(t, filepath.Join(root, ".agents", "skills", "repository-knowledge", "SKILL.md"))
+	bootstrap := filepath.Join(root, ".agents", "skills", "repository-knowledge", "scripts", "install-binary.sh")
+	assertFile(t, bootstrap)
+	info, err := os.Stat(bootstrap)
+	if err != nil {
+		t.Fatalf("stat bootstrap: %v", err)
+	}
+	if info.Mode().Perm() != 0o755 {
+		t.Fatalf("bootstrap mode = %v, want 0755", info.Mode().Perm())
+	}
 	assertFile(t, filepath.Join(root, ".repo-knowledge", "schemas", "repository.schema.json"))
 	if _, err := os.Stat(filepath.Join(root, ".repo-knowledge", "runtime")); !os.IsNotExist(err) {
 		t.Fatalf("install created a vendored runtime; stat error = %v", err)

@@ -77,7 +77,7 @@ func dispatch(arguments []string, stderr io.Writer) (commandOutcome, error) {
 	case "install", "update":
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository root")
-		sourceDefault := "release-binary"
+		sourceDefault := "https://github.com/rustedzone/repository-knowledge"
 		refDefault := "v" + repositoryknowledge.Version()
 		if command == "update" {
 			sourceDefault = ""

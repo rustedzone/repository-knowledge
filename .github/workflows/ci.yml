@@ -32,3 +32,21 @@ jobs:
         run: |
           make build
           go build -trimpath -o /tmp/repo-knowledge-eval ./cmd/repo-knowledge-eval
+
+  bootstrap-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Validate missing-binary bootstrap plan
+        shell: pwsh
+        run: |
+          $Version = "v$((Get-Content VERSION -Raw).Trim())"
+          $BinDir = Join-Path $env:RUNNER_TEMP 'repo-knowledge-bin'
+          & ./skills/repository-knowledge/scripts/install-binary.ps1 `
+            -Version $Version `
+            -Repository rustedzone/repository-knowledge `
+            -BinDir $BinDir `
+            -AddToPath `
+            -DryRun

@@ -2,6 +2,20 @@
 
 All notable changes follow Keep a Changelog. Versions follow Semantic Versioning.
 
+## [0.7.0] - 2026-08-26
+
+### Added
+
+- Permission-gated missing-binary recovery for installed skills on macOS, Linux, and Windows.
+- Embedded bootstrap helpers that select only a pinned platform artifact, verify `SHA256SUMS`, verify GitHub attestations when supported, and install into a user-local PATH location.
+- Offline regression coverage for confirmation, checksum verification, executable mode, embedded packaging, and canonical source metadata, plus a Windows runner dry-run for the PowerShell bootstrap plan.
+
+### Changed
+
+- Fresh installations now record the canonical GitHub repository URL instead of the ambiguous `release-binary` source label.
+- Toolkit-managed bootstrap scripts are installed with executable permissions while all other managed assets retain their existing modes.
+- Installation and architecture guidance now distinguishes repository asset installation from the separately approved user-level binary recovery flow.
+
 ## [0.6.1] - 2026-08-26
 
 ### Added

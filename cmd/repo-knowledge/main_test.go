@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,6 +82,28 @@ func TestRunInstallAllAgents(t *testing.T) {
 		if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
 			t.Fatalf("installed adapter file %s: info = %v, error = %v", relative, info, err)
 		}
+	}
+}
+
+func TestRunInstallRecordsCanonicalReleaseSourceByDefault(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{"install", "--target", root}, &stdout, &stderr); code != 0 {
+		t.Fatalf("run(install) code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		Source string `json:"source"`
+	}
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Source != "https://github.com/rustedzone/repository-knowledge" {
+		t.Fatalf("manifest source = %q", manifest.Source)
 	}
 }
 

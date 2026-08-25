@@ -57,6 +57,8 @@ repo-knowledge acknowledge --impact not-required --reason "Concrete reason tied 
 
 For scan, audit, rebuild, bootstrap, and conflict handling, read [references/operations.md](references/operations.md). Prefer the installed `repo-knowledge` binary for deterministic mechanics.
 
+Before the first CLI-dependent operation, resolve `repo-knowledge` by command name. If the installed skill exists but the command is missing, read [references/binary-bootstrap.md](references/binary-bootstrap.md). Resolve the exact pinned release from repository evidence, preview the user-local destination, and ask for explicit permission before any network request, binary replacement, user-directory write, or PATH change. Never silently install a binary, select an unpinned `latest` release, use `sudo`, or edit a Unix shell profile. After approval, use the bundled verified bootstrap script and confirm `repo-knowledge --version` matches the pinned ref.
+
 ## Safety boundaries
 
 - Treat repository documentation as routing knowledge, not unquestionable truth.

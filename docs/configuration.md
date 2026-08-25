@@ -21,7 +21,7 @@
 | `.repo-knowledge/doc-impact.json` | Consumer-generated | Decision bound to the current material changed-path fingerprint. |
 | `docs/**` | Consumer | Generated catalogs and maintained semantic knowledge. |
 
-The release binary is installed on developer machines and CI runners, not committed into the consuming repository.
+The release binary is installed on developer machines and CI runners, not committed into the consuming repository. The managed skill includes platform bootstrap helpers so a clone with a missing command can recover its pinned binary after explicit user permission; those helpers remain toolkit-owned and their digests are recorded in the manifest.
 
 Toolkit-managed adapter rules and skills are excluded from structural scan inventory and ignored by default documentation-impact classification. Consumer-authored files elsewhere in `.agents/`, `.claude/`, and `.cursor/` remain normal repository evidence.
 

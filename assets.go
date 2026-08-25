@@ -7,7 +7,7 @@ import (
 
 // Content contains every toolkit-managed asset installed into consuming repositories.
 //
-//go:embed VERSION policy/*.json schemas/*.json templates/* skills/repository-knowledge/*.md skills/repository-knowledge/references/*.md
+//go:embed VERSION policy/*.json schemas/*.json templates/* skills/repository-knowledge/*.md skills/repository-knowledge/references/*.md skills/repository-knowledge/scripts/*
 var Content embed.FS
 
 // Version returns the semantic version embedded into this binary.

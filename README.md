@@ -118,6 +118,10 @@ Start with proactive agent support. Add GitLab CI later if you need it.
 
 Download the released binary for your operating system plus `LICENSE`, verify both with `SHA256SUMS`, and retain the license with any redistributed binary. Put the executable somewhere on `PATH` as `repo-knowledge`.
 
+If a repository already contains the complete installed skill but the command is missing—for example, after cloning the repository onto a new machine—the skill can recover it. When a CLI operation is needed, the agent reads the exact release ref and source from `.repo-knowledge/toolkit.json`, previews the platform artifact and user-local destination, and asks permission before downloading or writing anything. After approval, the bundled bootstrap helper verifies `SHA256SUMS`, verifies the GitHub artifact attestation when a compatible `gh` command is available, and installs the executable into a user-owned directory already on `PATH`. It never selects `latest`, uses `sudo`, or silently edits a Unix shell profile. On Windows, adding the default user-local directory to the user PATH is included explicitly in the permission request.
+
+This is a recovery path, not a way to bootstrap an untrusted loose `SKILL.md`. It requires a complete toolkit installation with a pinned manifest, or the toolkit source tree with its `VERSION` file. See [Missing-binary recovery](docs/installation.md#missing-binary-recovery).
+
 If you are testing from this source repository instead, build it locally:
 
 ```bash
@@ -179,6 +183,8 @@ It does **not**:
 - overwrite repository-owned configuration or documentation;
 - run a scan or rebuild automatically.
 
+The repository installer does not copy its running executable into the consuming repository. The installed skill does include small bootstrap helpers that may later install the same pinned release into the user's PATH, but only after a separate, explicit permission prompt.
+
 The skill cannot be installed usefully as only `SKILL.md`: it depends on the shared contract, repository configuration, and documentation index. The command above installs that complete prompt-side bundle without enabling CI.
 
 ### Step 3: Verify the installation
@@ -219,7 +225,7 @@ repo-knowledge install \
   --target /path/to/your-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.6.1
+  --ref v0.7.0
 ```
 
 ## V1 contents
@@ -278,7 +284,7 @@ The reusable include downloads the pinned Linux binary from the toolkit project'
 - A central knowledge registry, embeddings, or vector retrieval.
 - Automated rewriting of semantic documentation during rebuild.
 
-Versions follow Semantic Versioning; consumers pin tags such as `v0.6.1`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
+Versions follow Semantic Versioning; consumers pin tags such as `v0.7.0`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
 
 ## License
 

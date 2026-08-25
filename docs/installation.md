@@ -32,6 +32,23 @@ gh attestation verify repo-knowledge-darwin-arm64 --repo rustedzone/repository-k
 
 The attestation is bound to the canonical `rustedzone/repository-knowledge` source repository.
 
+## Missing-binary recovery
+
+A cloned repository can contain `.repo-knowledge/` and an installed agent skill while the new machine has no `repo-knowledge` command. The skill handles this state only when the current task needs a deterministic CLI operation:
+
+1. It checks whether `repo-knowledge` resolves by command name.
+2. It reads the exact source and semantic release ref from `.repo-knowledge/toolkit.json`. Legacy manifests whose source is `release-binary` resolve to the canonical GitHub repository. It never chooses `latest`.
+3. It runs the installed bootstrap helper in dry-run mode to resolve the platform artifact and destination without using the network or writing files.
+4. It tells the user the source, version, artifact, destination, verification steps, replacement behavior, and any Windows user-PATH change, then asks for permission.
+5. Only after approval, it downloads the binary and `SHA256SUMS` over HTTPS, checks the binary digest, verifies the downloaded binary reports the pinned version, verifies the GitHub artifact attestation when a compatible `gh` command is available, and writes the executable.
+6. It resolves `repo-knowledge` by name and verifies the version again. A newly persisted Windows user PATH may require an open terminal or agent host to restart; the helper has already verified the exact installed artifact before that point.
+
+On macOS and Linux, `skills/repository-knowledge/scripts/install-binary.sh` chooses `~/.local/bin` or `~/bin` only when that directory is already on the current `PATH`. It does not call `sudo` or edit a shell startup file. If neither directory is on `PATH`, the agent must ask whether to use another user-owned PATH directory or let the user configure PATH.
+
+On Windows, `skills/repository-knowledge/scripts/install-binary.ps1` defaults to `%LOCALAPPDATA%\Programs\repo-knowledge\bin`. Because that directory is not normally on PATH initially, the agent's permission request must explicitly include adding it to the current user's PATH; already-open terminals may need to restart.
+
+If the manifest is absent, its ref is not an exact semantic tag, or it names a noncanonical source, the skill does not guess. It asks the user to confirm an exact trusted release. Declining installation does not prevent source inspection or semantic documentation work, but CLI-dependent operations remain unavailable and must be reported as such.
+
 ## Install into a repository
 
 Codex is the default adapter:
@@ -41,7 +58,7 @@ repo-knowledge install \
   --target /path/to/service-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.6.1
+  --ref v0.7.0
 ```
 
 Select Claude Code, Antigravity IDE, or Cursor with their canonical names:
@@ -109,7 +126,7 @@ Download and verify the new release binary, then run:
 repo-knowledge update \
   --target /path/to/service-repository \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.6.1
+  --ref v0.7.0
 ```
 
 When `--agent` and `--all-agents` are omitted, `update` keeps the adapter selection recorded by the existing installation. Supply one or more `--agent` options to select a subset, or `--all-agents` to switch the installation to every currently supported adapter. Unmodified obsolete toolkit-managed adapter files are removed, modified obsolete files are preserved and reported, and consumer-owned instructions remain untouched.
@@ -123,12 +140,12 @@ Add this to the consuming `.gitlab-ci.yml`:
 ```yaml
 include:
   - project: engineering/repository-knowledge
-    ref: v0.6.1
+    ref: v0.7.0
     file: /adapters/gitlab/documentation-check.yml
 
 variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: "12345"
-  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.6.1
+  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.7.0
   REPO_KNOWLEDGE_ENFORCEMENT: advisory
 ```
 

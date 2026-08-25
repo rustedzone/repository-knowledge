@@ -18,9 +18,11 @@ The prompt funnel loads routed knowledge before assessment, verifies material cl
 
 ## Binary architecture
 
-`assets.go` embeds `VERSION`, policy, schemas, templates, and the shared agent skill using `go:embed`. `cmd/repo-knowledge` owns argument parsing and human or JSON output. `internal/toolkit` owns deterministic repository operations. It uses only the Go standard library and the Git executable.
+`assets.go` embeds `VERSION`, policy, schemas, templates, and the shared agent skill—including its missing-binary bootstrap helpers—using `go:embed`. `cmd/repo-knowledge` owns argument parsing and human or JSON output. `internal/toolkit` owns deterministic repository operations. It uses only the Go standard library and the Git executable.
 
 A release produces static binaries for Linux, macOS, and Windows plus `LICENSE` and `SHA256SUMS`. The executable installs embedded assets but does not copy itself into the consumer repository. Developers and CI runners obtain the appropriate released binary independently and retain the license when redistributing it.
+
+The installed skill closes the cloned-repository gap without making installation implicit. When a required command is absent, agent instructions resolve a pinned source and ref from the managed manifest, run the embedded platform helper only after a user-visible plan and explicit permission, verify the checksum and available GitHub attestation, install into a user-local PATH location, and confirm the resulting version. Unix helpers never edit shell startup files or elevate privileges; the Windows helper changes the user PATH only when that mutation was included in the approval.
 
 ## Component responsibilities
 
@@ -28,7 +30,7 @@ A release produces static binaries for Linux, macOS, and Windows plus `LICENSE` 
 | --- | --- |
 | `policy/` | Runtime-neutral evidence, confidence, safety, ownership, invariant, and impact defaults. |
 | `schemas/` | Stable machine-readable interfaces for consumer configuration and acknowledgments. |
-| `skills/` | Shared prompt routing and semantic decision behavior for supported agents. |
+| `skills/` | Shared prompt routing, semantic decision behavior, and permission-gated missing-binary recovery helpers for supported agents. |
 | `assets.go` | Compile toolkit-managed resources into the release binary. |
 | `cmd/` | CLI interface and output contracts. |
 | `internal/toolkit/` | Installation, inventory, validation, impact, audit, and rebuild mechanics. |

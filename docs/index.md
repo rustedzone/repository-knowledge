@@ -21,7 +21,7 @@ Evidence anchors:
 ## Installation and distribution
 
 Read when:
-- changing installed files, update behavior, version pinning, or GitLab integration;
+- changing installed files, update behavior, version pinning, or GitHub/GitLab CI integration;
 - testing the toolkit against another repository.
 
 Knowledge:
@@ -33,6 +33,8 @@ Evidence anchors:
 - `cmd/repo-knowledge/main.go`
 - `Makefile`
 - `templates/`
+- `.github/workflows/documentation-check.yml`
+- `adapters/github/`
 - `adapters/gitlab/`
 
 ## Agent behavior

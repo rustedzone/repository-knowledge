@@ -31,7 +31,7 @@ func TestUnixBootstrapInstallsVerifiedPinnedFixture(t *testing.T) {
 	}
 	platform := map[string]string{"darwin": "darwin", "linux": "linux"}[runtime.GOOS]
 	artifact := fmt.Sprintf("repo-knowledge-%s-%s", platform, architecture)
-	payload := []byte("#!/bin/sh\nprintf 'repo-knowledge 0.7.0\\n'\n")
+	payload := []byte("#!/bin/sh\nprintf 'repo-knowledge 0.8.0\\n'\n")
 	digest := sha256.Sum256(payload)
 
 	root := t.TempDir()
@@ -69,7 +69,7 @@ cp "$FAKE_RELEASE_DIR/${url##*/}" "$output"
 	}
 
 	command := exec.Command("sh", "skills/repository-knowledge/scripts/install-binary.sh",
-		"--version", "v0.7.0", "--bin-dir", binDir, "--yes")
+		"--version", "v0.8.0", "--bin-dir", binDir, "--yes")
 	command.Env = append(os.Environ(),
 		"FAKE_RELEASE_DIR="+releaseDir,
 		"HOME="+filepath.Join(root, "home"),
@@ -105,7 +105,7 @@ func TestUnixBootstrapRequiresConfirmationBeforeDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	command := exec.Command("sh", "skills/repository-knowledge/scripts/install-binary.sh",
-		"--version", "v0.7.0", "--bin-dir", binDir)
+		"--version", "v0.8.0", "--bin-dir", binDir)
 	command.Env = append(os.Environ(), "PATH="+binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 	output, err := command.CombinedOutput()
 	if err == nil || !strings.Contains(string(output), "confirmation required") {

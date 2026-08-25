@@ -1,0 +1,119 @@
+name: Repository knowledge documentation impact
+
+on:
+  workflow_call:
+    inputs:
+      toolkit-version:
+        description: Exact repository-knowledge release tag, such as v0.8.0
+        required: true
+        type: string
+      enforcement:
+        description: Documentation-impact enforcement mode
+        required: false
+        default: advisory
+        type: string
+      base-sha:
+        description: Optional explicit base Git object ID
+        required: false
+        default: ''
+        type: string
+      head-sha:
+        description: Optional explicit head Git object ID
+        required: false
+        default: ''
+        type: string
+      retention-days:
+        description: Number of days to retain the JSON impact report
+        required: false
+        default: 14
+        type: number
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  documentation-impact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out caller repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Download and verify pinned toolkit
+        id: toolkit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TOOLKIT_VERSION: ${{ inputs.toolkit-version }}
+          TOOLKIT_REPOSITORY: rustedzone/repository-knowledge
+        run: |
+          set -euo pipefail
+          [[ "${TOOLKIT_VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || {
+            echo "toolkit-version must be an exact semantic release tag" >&2
+            exit 2
+          }
+          case "${RUNNER_ARCH}" in
+            X64) toolkit_arch=amd64 ;;
+            ARM64) toolkit_arch=arm64 ;;
+            *) echo "unsupported runner architecture: ${RUNNER_ARCH}" >&2; exit 2 ;;
+          esac
+          toolkit_dir="$(mktemp -d "${RUNNER_TEMP}/repo-knowledge.XXXXXX")"
+          binary_name="repo-knowledge-linux-${toolkit_arch}"
+          adapter_name="repo-knowledge-github-adapter.sh"
+          release_url="https://github.com/${TOOLKIT_REPOSITORY}/releases/download/${TOOLKIT_VERSION}"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "${toolkit_dir}/${binary_name}" "${release_url}/${binary_name}"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "${toolkit_dir}/${adapter_name}" "${release_url}/${adapter_name}"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            --output "${toolkit_dir}/SHA256SUMS" "${release_url}/SHA256SUMS"
+          verify_checksum() {
+            local name=$1
+            local expected actual
+            expected="$(awk -v name="${name}" '$2 == name { print $1 }' "${toolkit_dir}/SHA256SUMS")"
+            [[ "${expected}" =~ ^[0-9a-fA-F]{64}$ ]] || {
+              echo "SHA256SUMS has no valid entry for ${name}" >&2
+              exit 2
+            }
+            actual="$(sha256sum "${toolkit_dir}/${name}" | awk '{ print $1 }')"
+            [[ "${actual}" == "${expected}" ]] || {
+              echo "checksum mismatch for ${name}" >&2
+              exit 2
+            }
+          }
+          verify_checksum "${binary_name}"
+          verify_checksum "${adapter_name}"
+          chmod 0755 "${toolkit_dir}/${binary_name}" "${toolkit_dir}/${adapter_name}"
+          [[ "$("${toolkit_dir}/${binary_name}" --version)" == "repo-knowledge ${TOOLKIT_VERSION#v}" ]] || {
+            echo "downloaded binary version does not match ${TOOLKIT_VERSION}" >&2
+            exit 2
+          }
+          gh attestation verify "${toolkit_dir}/${binary_name}" --repo "${TOOLKIT_REPOSITORY}" >/dev/null
+          gh attestation verify "${toolkit_dir}/${adapter_name}" --repo "${TOOLKIT_REPOSITORY}" >/dev/null
+          echo "binary=${toolkit_dir}/${binary_name}" >> "${GITHUB_OUTPUT}"
+          echo "adapter=${toolkit_dir}/${adapter_name}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate documentation impact
+        shell: bash
+        env:
+          REPO_KNOWLEDGE_ADAPTER: ${{ steps.toolkit.outputs.adapter }}
+          REPO_KNOWLEDGE_BINARY: ${{ steps.toolkit.outputs.binary }}
+          REPO_KNOWLEDGE_TARGET: ${{ github.workspace }}
+          REPO_KNOWLEDGE_OUTPUT: ${{ runner.temp }}/repository-knowledge-impact.json
+          REPO_KNOWLEDGE_ENFORCEMENT: ${{ inputs.enforcement }}
+          REPO_KNOWLEDGE_BASE_SHA: ${{ inputs.base-sha || github.event.pull_request.base.sha || github.event.before }}
+          REPO_KNOWLEDGE_HEAD_SHA: ${{ inputs.head-sha || github.event.pull_request.head.sha || github.sha }}
+        run: '"${REPO_KNOWLEDGE_ADAPTER}"'
+
+      - name: Upload documentation-impact report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: repository-knowledge-impact
+          path: ${{ runner.temp }}/repository-knowledge-impact.json
+          if-no-files-found: warn
+          retention-days: ${{ inputs.retention-days }}

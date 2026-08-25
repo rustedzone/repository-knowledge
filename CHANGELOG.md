@@ -2,6 +2,19 @@
 
 All notable changes follow Keep a Changelog. Versions follow Semantic Versioning.
 
+## [0.8.0] - 2026-08-26
+
+### Added
+
+- Reusable GitHub Actions documentation-impact workflow for pull requests and pushes in consuming repositories.
+- Tested GitHub adapter release asset with committed-range resolution, initial-push handling, enforcement exit propagation, and persistent JSON reporting.
+- Read-only consumer example with checksum, binary-version, and GitHub artifact-attestation verification.
+
+### Changed
+
+- Release packages now include `repo-knowledge-github-adapter.sh` in `SHA256SUMS` and provenance attestations.
+- Installation, architecture, testing, extension, and top-level guidance now document GitHub Actions and GitLab CI as equivalent transports over the shared validator.
+
 ## [0.7.0] - 2026-08-26
 
 ### Added

@@ -12,7 +12,7 @@ Add an extension at the narrowest layer that owns its concern:
 
 Default invariants must be portable and objective. Capability-specific defaults may activate only when a capability is declared or reliably detected. A classifier token is not sufficient evidence for a blocking semantic invariant.
 
-When changing installed managed assets, keep `install` and `update` behavior symmetric and add an ownership-preservation test. When changing a release filename, update the Makefile, central pipeline, GitLab adapter, checksum verification, and installation documentation together.
+When changing installed managed assets, keep `install` and `update` behavior symmetric and add an ownership-preservation test. When changing a release filename, update the Makefile, release workflow, GitHub reusable workflow and adapter, GitLab adapter, checksum verification, tests, and installation documentation together.
 
 ## Adding an agent adapter
 

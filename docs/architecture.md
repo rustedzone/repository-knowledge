@@ -20,7 +20,7 @@ The prompt funnel loads routed knowledge before assessment, verifies material cl
 
 `assets.go` embeds `VERSION`, policy, schemas, templates, and the shared agent skill—including its missing-binary bootstrap helpers—using `go:embed`. `cmd/repo-knowledge` owns argument parsing and human or JSON output. `internal/toolkit` owns deterministic repository operations. It uses only the Go standard library and the Git executable.
 
-A release produces static binaries for Linux, macOS, and Windows plus `LICENSE` and `SHA256SUMS`. The executable installs embedded assets but does not copy itself into the consumer repository. Developers and CI runners obtain the appropriate released binary independently and retain the license when redistributing it.
+A release produces static binaries for Linux, macOS, and Windows, the executable GitHub adapter, `LICENSE`, and `SHA256SUMS`. The executable installs embedded assets but does not copy itself into the consumer repository. Developers and CI runners obtain the appropriate released binary independently and retain the license when redistributing it.
 
 The installed skill closes the cloned-repository gap without making installation implicit. When a required command is absent, agent instructions resolve a pinned source and ref from the managed manifest, run the embedded platform helper only after a user-visible plan and explicit permission, verify the checksum and available GitHub attestation, install into a user-local PATH location, and confirm the resulting version. Unix helpers never edit shell startup files or elevate privileges; the Windows helper changes the user PATH only when that mutation was included in the approval.
 
@@ -35,7 +35,8 @@ The installed skill closes the cloned-repository gap without making installation
 | `cmd/` | CLI interface and output contracts. |
 | `internal/toolkit/` | Installation, inventory, validation, impact, audit, and rebuild mechanics. |
 | `templates/` | Initial consumer-owned files, native agent rules, and the managed Codex `AGENTS.md` block. |
-| `adapters/` | SCM/runtime glue that invokes the released binary. |
+| `adapters/` | Tested GitHub and GitLab SCM/runtime glue that invokes the released binary. |
+| `.github/workflows/documentation-check.yml` | Public reusable workflow that supplies GitHub checkout, release verification, permissions, and report upload. |
 | `evals/` | Disposable agent-behavior fixtures, prompts, deterministic expectations, and semantic rubrics. |
 | `examples/` | Concrete adoption configurations, not alternative policy sources. |
 
@@ -43,7 +44,23 @@ The installed skill closes the cloned-repository gap without making installation
 
 Installation records every toolkit-owned file and digest in `.repo-knowledge/toolkit.json`. `update` replaces installed skills, adapter rules, policy snapshots, schemas, and the managed Codex `AGENTS.md` block. It does not replace `.repo-knowledge/repository.json`, consumer rules, documentation, scan state, rebuild proposals, or impact decisions. Without `--agent` or `--all-agents`, update retains the adapters recorded in the existing manifest. Explicit `--agent` values select a subset; `--all-agents` resolves to the complete canonical adapter list before the same install/update reconciliation runs.
 
-Consumers pin a release tag. They update by running the new binary and changing any pinned GitLab package version in the same merge request. GitHub tag builds publish checksummed, attested artifacts; the GitLab pipeline remains available for registry-based distribution. The binary follows Semantic Versioning precedence and refuses a version downgrade, including a release-to-prerelease downgrade, unless `--allow-downgrade` is explicit.
+Consumers pin a release tag. They update by running the new binary and changing the GitHub workflow tag and toolkit input or GitLab include and package version in the same merge request. GitHub tag builds publish checksummed, attested binaries and the GitHub adapter; the GitLab pipeline remains available for registry-based distribution. The binary follows Semantic Versioning precedence and refuses a version downgrade, including a release-to-prerelease downgrade, unless `--allow-downgrade` is explicit.
+
+## CI adapter lifecycle
+
+The GitHub and GitLab integrations resolve platform-specific CI metadata but converge before enforcement:
+
+```text
+pull request or push
+    -> full-history checkout
+    -> explicit base and head Git object IDs
+    -> pinned release download and SHA-256 verification
+    -> GitHub: artifact-attestation verification
+    -> repo-knowledge validate-doc-impact
+    -> JSON report artifact and advisory/pass/fail job status
+```
+
+The GitHub reusable workflow has read-only contents and attestation permissions, does not persist checkout credentials, and requires no secrets. Its shell adapter is shipped as a release asset so the exact executed logic is covered by `SHA256SUMS` and release provenance. GitLab retains its package-registry and job-token transport. Neither adapter writes or commits repository documentation.
 
 ## Prompt-driven lifecycle
 

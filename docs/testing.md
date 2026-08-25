@@ -47,7 +47,7 @@ Use fresh output directories for repeated trials. Track first-attempt `pass@1`; 
 make build
 TARGET_REPOSITORY="$(mktemp -d)"
 git -C "${TARGET_REPOSITORY}" init
-./repo-knowledge install --target "${TARGET_REPOSITORY}" --all-agents --source local --ref v0.7.0
+./repo-knowledge install --target "${TARGET_REPOSITORY}" --all-agents --source local --ref v0.8.0
 ./repo-knowledge doctor --target "${TARGET_REPOSITORY}"
 ./repo-knowledge scan --target "${TARGET_REPOSITORY}"
 ./repo-knowledge rebuild --target "${TARGET_REPOSITORY}"
@@ -82,8 +82,10 @@ git -C "${TARGET_REPOSITORY}" init
 23. Run `update` with a newer binary and verify the selected adapters and consumer-owned files remain unchanged. Run `update --all-agents` from a subset installation and confirm it expands to every adapter. Switch back to an explicit subset and confirm only obsolete unmodified toolkit-managed adapter files are removed. Confirm an older binary is rejected without `--allow-downgrade`.
 24. Install an agent adapter into a disposable repository and confirm both bootstrap helpers are managed files, the Unix helper has mode `0755`, and `doctor` accepts their recorded digests.
 25. Run the Unix helper against local fake release assets: verify it refuses an unconfirmed non-interactive install, accepts only a pinned semantic tag, checks `SHA256SUMS`, writes only to a directory already on PATH, and installs mode `0755`. The GitHub CI Windows job must also pass its PowerShell dry-run; before release, exercise the full Windows checksum, confirmation, user-local destination, and explicit user-PATH cases.
-26. Publish a tag and verify every binary against `SHA256SUMS`, then exercise the missing-binary recovery from a separately cloned consumer and the GitLab include from a separate project.
+26. Run the GitHub adapter integration test over committed base/head SHAs. Confirm advisory mode reports without blocking, acknowledgment mode propagates a failing exit code, invalid modes and object IDs fail closed, and the JSON report remains available.
+27. Validate the reusable GitHub workflow contract: read-only contents and attestation permissions, full checkout without persisted credentials, matching pinned release inputs, binary and adapter checksum/attestation verification, ordinary pull-request context, and unconditional JSON artifact upload.
+28. Publish a tag and verify every binary plus `repo-knowledge-github-adapter.sh` against `SHA256SUMS`. Call the tagged reusable workflow from a separate GitHub repository, exercise missing-binary recovery from a separate clone, and exercise the GitLab include from a separate project.
 
 Before tagging, ensure `VERSION`, the adapter package version, documentation examples, and changelog agree.
 
-For a GitHub tag, also confirm the release workflow used the pinned patched Go toolchain, attached every file listed in `SHA256SUMS` including `LICENSE`, and produced a verifiable artifact attestation. Enable private vulnerability reporting, secret scanning, and push protection in the public repository settings before accepting contributions.
+For a GitHub tag, also confirm the release workflow used the pinned patched Go toolchain, attached every file listed in `SHA256SUMS` including `repo-knowledge-github-adapter.sh` and `LICENSE`, and produced a verifiable artifact attestation. Enable private vulnerability reporting, secret scanning, and push protection in the public repository settings before accepting contributions.

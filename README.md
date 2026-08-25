@@ -110,9 +110,9 @@ The objective grader cannot establish that prose is correct or useful. A determi
 There are two independent parts:
 
 1. **Proactive agent support** — used when a repository change starts from a Codex, Claude Code, Antigravity IDE, or Cursor prompt.
-2. **GitLab CI validation** — an optional fallback for changes written without an agent.
+2. **CI validation** — an optional GitHub Actions or GitLab fallback for changes written without an agent.
 
-Start with proactive agent support. Add GitLab CI later if you need it.
+Start with proactive agent support. Add CI later if you need it.
 
 ### Step 1: Get the binary
 
@@ -177,7 +177,7 @@ AGENTS.md                                      Codex only: managed routing block
 
 It does **not**:
 
-- install GitLab CI;
+- install GitHub Actions or GitLab CI;
 - commit the `repo-knowledge` binary into the repository;
 - replace an existing `docs/index.md`;
 - overwrite repository-owned configuration or documentation;
@@ -212,9 +212,23 @@ repo-knowledge rebuild --target . --apply
 
 The inventory is discovery input only. Ask the installed agent to inspect the evidence, write semantic guides, and add verified knowledge routes to `.repo-knowledge/repository.json` and `docs/index.md`.
 
-### Step 5: Optionally add GitLab CI
+### Step 5: Optionally add CI
 
-The proactive agent installation is complete without CI. To validate changes made manually or by other tools, follow [GitLab CI fallback](#gitlab-ci-fallback) and the detailed [installation guide](docs/installation.md#gitlab-ci).
+The proactive agent installation is complete without CI. GitHub repositories can call the pinned reusable workflow:
+
+```yaml
+jobs:
+  documentation-impact:
+    permissions:
+      contents: read
+      attestations: read
+    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.8.0
+    with:
+      toolkit-version: v0.8.0
+      enforcement: advisory
+```
+
+The caller normally triggers this job for `pull_request` and pushes to `main`. GitLab repositories use the existing pinned include. See [GitHub Actions CI](docs/installation.md#github-actions-ci) and [GitLab CI](docs/installation.md#gitlab-ci) for complete examples and security boundaries.
 
 ### Record an explicit production source and version
 
@@ -225,7 +239,7 @@ repo-knowledge install \
   --target /path/to/your-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.7.0
+  --ref v0.8.0
 ```
 
 ## V1 contents
@@ -239,13 +253,13 @@ repository-knowledge/
 ├── schemas/                 consumer configuration interfaces
 ├── skills/                  shared agent skill
 ├── templates/               bootstrap and consumer-owned defaults
-├── adapters/gitlab/         pinned binary CI adapter
+├── adapters/                GitHub and GitLab CI adapters
 ├── evals/                   isolated prompt-driven agent evaluations
 ├── examples/                adoption examples
 └── docs/                    architecture and operating guidance
 ```
 
-The contract is the product. The Codex, Claude Code, Antigravity IDE, Cursor, and GitLab adapters consume it. The Go executable embeds every toolkit-managed asset, so a released binary can install or update a repository without a toolkit checkout, Go toolchain, Python runtime, or package download. The build has no third-party Go dependencies and release artifacts use `CGO_ENABLED=0`.
+The contract is the product. The Codex, Claude Code, Antigravity IDE, Cursor, GitHub Actions, and GitLab adapters consume it. The Go executable embeds every toolkit-managed asset, so a released binary can install or update a repository without a toolkit checkout, Go toolchain, Python runtime, or package download. The build has no third-party Go dependencies and release artifacts use `CGO_ENABLED=0`.
 
 See [Installation](docs/installation.md), [Testing](docs/testing.md), and [Architecture](docs/architecture.md).
 
@@ -269,11 +283,13 @@ For each selected agent, the binary installs a native project rule plus the repo
 
 ## Continuous integration and releases
 
-GitHub pull requests and pushes to `main` run tests, race-enabled tests, vet, formatting checks, and builds for both CLIs using the patched Go release selected by the workflow. Version tags build the cross-platform release set, generate GitHub artifact attestations, and publish the binaries, `LICENSE`, and `SHA256SUMS` to a GitHub release.
+GitHub pull requests and pushes to `main` run tests, race-enabled tests, vet, formatting checks, and builds for both CLIs using the patched Go release selected by the workflow. Version tags build the cross-platform release set, package the GitHub adapter, generate GitHub artifact attestations, and publish the artifacts, `LICENSE`, and `SHA256SUMS` to a GitHub release.
 
-The GitLab CI fallback is optional and is not installed by `repo-knowledge install`.
+The GitHub Actions and GitLab CI integrations are optional and are not installed by `repo-knowledge install`.
 
-The reusable include downloads the pinned Linux binary from the toolkit project's GitLab Generic Package Registry, verifies `SHA256SUMS`, and runs the same impact validator over the Git diff. It uploads a JSON report and never writes or commits documentation. See [GitLab CI installation](docs/installation.md#gitlab-ci) for the include configuration. Start in `advisory`, move to `acknowledgment` after teams reliably record decisions, and use `enforced` only for deterministic mappings configured by the consuming repository.
+The GitHub reusable workflow checks out the caller with full history and without persisted credentials, downloads the pinned Linux binary and GitHub adapter from the matching release, verifies their checksums and attestations, runs the validator over the explicit pull-request or push range, and uploads `repository-knowledge-impact.json` even when blocking validation fails. It pins its GitHub-owned action dependencies to full commit SHAs, needs only read access to contents and attestations, and does not use `pull_request_target`, secrets, or repository write permissions.
+
+The GitLab reusable include downloads the pinned Linux binary from the toolkit project's Generic Package Registry, verifies `SHA256SUMS`, and runs the same impact validator over the Git diff. Both CI adapters upload a JSON report and never write or commit documentation. Start in `advisory`, move to `acknowledgment` after teams reliably record decisions, and use `enforced` only for deterministic mappings configured by the consuming repository.
 
 ## Intentionally deferred from V1
 
@@ -284,7 +300,7 @@ The reusable include downloads the pinned Linux binary from the toolkit project'
 - A central knowledge registry, embeddings, or vector retrieval.
 - Automated rewriting of semantic documentation during rebuild.
 
-Versions follow Semantic Versioning; consumers pin tags such as `v0.7.0`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
+Versions follow Semantic Versioning; consumers pin tags such as `v0.8.0`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
 
 ## License
 

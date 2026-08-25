@@ -17,6 +17,7 @@ repo-knowledge-linux-arm64
 repo-knowledge-darwin-amd64
 repo-knowledge-darwin-arm64
 repo-knowledge-windows-amd64.exe
+repo-knowledge-github-adapter.sh
 LICENSE
 SHA256SUMS
 ```
@@ -58,7 +59,7 @@ repo-knowledge install \
   --target /path/to/service-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.7.0
+  --ref v0.8.0
 ```
 
 Select Claude Code, Antigravity IDE, or Cursor with their canonical names:
@@ -126,12 +127,52 @@ Download and verify the new release binary, then run:
 repo-knowledge update \
   --target /path/to/service-repository \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.7.0
+  --ref v0.8.0
 ```
 
 When `--agent` and `--all-agents` are omitted, `update` keeps the adapter selection recorded by the existing installation. Supply one or more `--agent` options to select a subset, or `--all-agents` to switch the installation to every currently supported adapter. Unmodified obsolete toolkit-managed adapter files are removed, modified obsolete files are preserved and reported, and consumer-owned instructions remain untouched.
 
-The new binary contains its own templates, policy, schemas, and skills, so no central source checkout is required. Run `doctor`, `scan`, and `audit` after updating. Change the GitLab include ref and package version in the same merge request.
+The new binary contains its own templates, policy, schemas, and skills, so no central source checkout is required. Run `doctor`, `scan`, and `audit` after updating. Change any GitHub reusable-workflow tag, `toolkit-version`, GitLab include ref, and GitLab package version in the same merge request.
+
+## GitHub Actions CI
+
+Copy [the consumer example](../examples/github/repository-knowledge.yml) to `.github/workflows/repository-knowledge.yml` in the consuming repository:
+
+```yaml
+name: Repository knowledge
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  attestations: read
+
+jobs:
+  documentation-impact:
+    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.8.0
+    with:
+      toolkit-version: v0.8.0
+      enforcement: advisory
+```
+
+Update `uses` and `toolkit-version` together. The workflow ref selects the CI orchestration; `toolkit-version` selects the checksummed and attested binary plus `repo-knowledge-github-adapter.sh` from GitHub Releases. The example uses the convenient release tag. Organizations requiring immutable workflow references should replace `@v0.8.0` with the full commit SHA for that release while retaining `toolkit-version: v0.8.0`.
+
+The reusable workflow:
+
+- checks out the caller with `fetch-depth: 0` and without persisted credentials;
+- uses the pull-request base/head SHAs or push before/current SHAs, with empty-tree handling for an initial push;
+- supports Linux `amd64` and `arm64` runners internally;
+- verifies `SHA256SUMS`, the binary's reported version, and GitHub artifact attestations;
+- pins its GitHub-owned checkout and artifact-upload dependencies to full commit SHAs;
+- uploads `repository-knowledge-impact.json` for 14 days, including when acknowledgment or enforced validation blocks the job; and
+- never commits, opens a pull request, or writes documentation.
+
+The caller grants only `contents: read` and `attestations: read`. Reusable workflows cannot elevate permissions granted by their caller, so both are declared explicitly. No secrets are required. Use the ordinary `pull_request` event; do not change the example to `pull_request_target`, which has a more privileged security model and is unnecessary for this read-only validator.
+
+For unusual events, optional `base-sha` and `head-sha` inputs accept explicit 40- or 64-character Git object IDs. Those objects must already exist in the full checkout: the workflow deliberately does not persist credentials or fetch arbitrary caller-supplied objects. `retention-days` changes report retention. Start with `advisory`, then move to `acknowledgment` or `enforced` using the same rollout criteria as GitLab.
 
 ## GitLab CI
 
@@ -140,12 +181,12 @@ Add this to the consuming `.gitlab-ci.yml`:
 ```yaml
 include:
   - project: engineering/repository-knowledge
-    ref: v0.7.0
+    ref: v0.8.0
     file: /adapters/gitlab/documentation-check.yml
 
 variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: "12345"
-  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.7.0
+  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.8.0
   REPO_KNOWLEDGE_ENFORCEMENT: advisory
 ```
 

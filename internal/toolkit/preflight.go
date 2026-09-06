@@ -466,7 +466,7 @@ func activationCommandAllowed(arguments json.RawMessage) bool {
 			hasToken = true
 		case "--route":
 			hasRoute = true
-		case "--target":
+		case "--target", "--workflow":
 		default:
 			return false
 		}

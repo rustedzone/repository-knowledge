@@ -106,6 +106,11 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 		target := flags.String("target", "", "prepared evaluation repository")
 		duration := flags.String("duration", "", "trial duration, such as 12m30s")
 		tokens := flags.Int64("tokens", -1, "total token usage when available")
+		tokenSource := flags.String("token-source", "", "usage source: codex, claude-code, antigravity-ide, cursor, manual, or unavailable")
+		inputTokens := flags.Int64("input-tokens", -1, "provider-reported input tokens")
+		outputTokens := flags.Int64("output-tokens", -1, "provider-reported output tokens")
+		cachedTokens := flags.Int64("cached-tokens", -1, "provider-reported cached input tokens")
+		totalTokens := flags.Int64("total-tokens", -1, "provider-reported total tokens")
 		semanticStatus := flags.String("semantic-status", "", "explicit semantic status: pass or fail")
 		semanticEarned := flags.Int("semantic-score", -1, "semantic rubric points earned")
 		semanticAvailable := flags.Int("semantic-available", -1, "semantic rubric points available")
@@ -139,13 +144,24 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 		if *tokens >= 0 {
 			tokenUsage = tokens
 		}
+		var usage *evalharness.TokenUsageDetails
+		if strings.TrimSpace(*tokenSource) != "" || *inputTokens >= 0 || *outputTokens >= 0 || *cachedTokens >= 0 || *totalTokens >= 0 {
+			usage = &evalharness.TokenUsageDetails{Source: *tokenSource}
+			usage.InputTokens = nonNegativeInt64(inputTokens)
+			usage.OutputTokens = nonNegativeInt64(outputTokens)
+			usage.CachedTokens = nonNegativeInt64(cachedTokens)
+			usage.TotalTokens = nonNegativeInt64(totalTokens)
+			if usage.TotalTokens == nil && tokenUsage != nil {
+				usage.TotalTokens = tokenUsage
+			}
+		}
 		var score *evalharness.SemanticScore
 		if *semanticEarned >= 0 || *semanticAvailable >= 0 {
 			score = &evalharness.SemanticScore{Earned: *semanticEarned, Available: *semanticAvailable}
 		}
 		result, err := evalharness.Grade(evalharness.GradeOptions{
 			CasesRoot: root, CaseID: *caseID, Target: *target, DurationMillis: durationMillis,
-			TokenUsage: tokenUsage, SemanticStatus: *semanticStatus, SemanticScore: score, SemanticReviewer: *reviewer,
+			TokenUsage: tokenUsage, Usage: usage, SemanticStatus: *semanticStatus, SemanticScore: score, SemanticReviewer: *reviewer,
 		})
 		if err != nil {
 			fmt.Fprintln(stderr, "error:", err)
@@ -191,6 +207,13 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "error: unknown command %q\n", arguments[0])
 		return 2
 	}
+}
+
+func nonNegativeInt64(value *int64) *int64 {
+	if value == nil || *value < 0 {
+		return nil
+	}
+	return value
 }
 
 func encodeJSON(output io.Writer, value any) int {

@@ -91,6 +91,12 @@ func validateTokenUsage(usage *TokenUsageDetails, legacy *int64) (*TokenUsageDet
 	if copy.Source == "" {
 		return nil, nil, fmt.Errorf("detailed token usage requires a source")
 	}
+	supportedSources := map[string]struct{}{
+		"codex": {}, "claude-code": {}, "antigravity-ide": {}, "cursor": {}, "manual": {}, TokenSourceUnavailable: {},
+	}
+	if _, ok := supportedSources[copy.Source]; !ok {
+		return nil, nil, fmt.Errorf("unsupported token usage source %q", copy.Source)
+	}
 	values := []*int64{copy.InputTokens, copy.OutputTokens, copy.CachedTokens, copy.TotalTokens}
 	for _, value := range values {
 		if value != nil && *value < 0 {
@@ -111,6 +117,9 @@ func validateTokenUsage(usage *TokenUsageDetails, legacy *int64) (*TokenUsageDet
 	if copy.TotalTokens == nil && copy.InputTokens != nil && copy.OutputTokens != nil {
 		total := *copy.InputTokens + *copy.OutputTokens
 		copy.TotalTokens = &total
+	}
+	if copy.TotalTokens == nil && legacy != nil {
+		copy.TotalTokens = legacy
 	}
 	if copy.TotalTokens != nil && copy.InputTokens != nil && copy.OutputTokens != nil && *copy.TotalTokens != *copy.InputTokens+*copy.OutputTokens {
 		return nil, nil, fmt.Errorf("total token usage must equal input plus output tokens")

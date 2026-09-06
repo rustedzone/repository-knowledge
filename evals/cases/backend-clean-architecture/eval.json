@@ -1,7 +1,9 @@
 {
   "schema_version": "1.0",
+  "family": "conformance",
   "id": "backend-clean-architecture",
   "revision": "1",
+  "source_commit": "821034760d0b6dfd52c3522b5eb195c18b7f0857",
   "description": "Layered Go backend documentation with Oathkeeper identity, approval state transitions, Postgres/Redis, Keto synchronization, and misleading cascade prose.",
   "fixture": "fixture",
   "prompt": "prompt.md",

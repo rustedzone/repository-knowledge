@@ -1,24 +1,28 @@
 {
   "schema_version": "1.0",
-  "family": "conformance",
-  "id": "frontend-nextjs",
+  "family": "outcome_benchmark",
+  "id": "frontend-onboarding",
   "revision": "1",
   "source_commit": "821034760d0b6dfd52c3522b5eb195c18b7f0857",
-  "description": "Next.js frontend documentation with stale prose, a static-intelligence trap, protected navigation, form state, and a BFF proxy.",
-  "fixture": "fixture",
+  "description": "Neutral documentation task for a Next.js frontend with stale prose, protected navigation, user-form state, static intelligence data, and a BFF proxy.",
+  "fixture": "../../cases/frontend-nextjs/fixture",
   "prompt": "prompt.md",
   "rubric": "rubric.md",
   "allowed_changes": [
-    "docs/**",
-    ".repo-knowledge/repository.json",
-    ".repo-knowledge/scan-state.json",
-    ".repo-knowledge/rebuild-proposal.md"
+    "docs/**"
+  ],
+  "expected_behavioral_trace": [
+    "Establish current framework and dependency versions from the manifest and lockfile instead of stale prose.",
+    "Trace protected navigation from the route layout through session lookup, redirect behavior, and permission checks.",
+    "Trace user creation through form state, schema validation, mutation behavior, navigation, and the BFF boundary.",
+    "Distinguish static intelligence data from live integrations and preserve application source.",
+    "Write evidence-attributed, implementation-ready documentation and verify local links."
   ],
   "checks": [
     {
       "id": "baseline-guides",
       "type": "paths_exist",
-      "paths": ["docs/index.md", "docs/repository-overview.md", "docs/architecture.md"]
+      "paths": ["docs/index.md", "docs/repository-overview.md", "docs/architecture.md", "docs/state-and-forms.md"]
     },
     {
       "id": "semantic-doc-count",
@@ -27,10 +31,10 @@
       "minimum": 7
     },
     {
-      "id": "docs-rebuilt",
+      "id": "docs-improved",
       "type": "changed_files_minimum",
       "glob": "docs/**/*.md",
-      "minimum": 5
+      "minimum": 4
     },
     {
       "id": "current-framework-version",
@@ -49,12 +53,6 @@
       "type": "contains_all",
       "glob": "docs/**/*.md",
       "patterns": ["static", "src/data/intelligence.json", "IntelligencePage"]
-    },
-    {
-      "id": "false-live-integration-rejected",
-      "type": "not_contains",
-      "glob": "docs/**/*.md",
-      "patterns": ["live Pega backend", "Pega intelligence API"]
     },
     {
       "id": "frontend-mechanisms",
@@ -80,12 +78,6 @@
       "type": "existing_evidence_minimum",
       "glob": "docs/**/*.md",
       "minimum": 10
-    },
-    {
-      "id": "verified-routes",
-      "type": "capabilities_minimum",
-      "path": ".repo-knowledge/repository.json",
-      "minimum": 4
     },
     {
       "id": "documentation-links",

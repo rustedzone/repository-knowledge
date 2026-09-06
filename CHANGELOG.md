@@ -8,11 +8,15 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 - Workflow-security regression coverage that rejects mutable action tags, branches, short commit references, and mutable Docker tags across every GitHub Actions workflow.
 - Go 1.22.0 and Go 1.25.14 compatibility jobs that run ordinary checks and build both CLIs, with race tests isolated to Go 1.25.14.
+- A separate neutral outcome-benchmark family with pinned fixture provenance, objective checks, blind semantic rubrics, allowed-change boundaries, expected behavioral traces, and an independently reproducible frontend control/treatment case.
+- Immutable result recording for successful and failed trials, including run configuration, duration, optional token usage, explicit semantic review metadata, and a preserved patch or output artifact.
 
 ### Changed
 
 - GitHub Actions dependencies are pinned to verified full commit SHAs with exact release comments.
 - Tag releases now verify and build with read-only repository access, transfer the release set through pinned artifact actions, and grant write, identity-token, and attestation permissions only to the dependent publishing job.
+- `repo-knowledge-eval prepare` now requires explicit `control` or `treatment` conditions for outcome benchmarks while retaining the existing conformance workflow by default.
+- Deterministic success remains semantically pending unless a reviewer explicitly supplies semantic status, score, and identity.
 
 ## [0.9.0] - 2026-09-06
 

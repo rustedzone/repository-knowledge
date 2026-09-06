@@ -1,7 +1,7 @@
 # Pin this package version to the same tag used by the central include.
 variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: ""
-  REPO_KNOWLEDGE_TOOLKIT_VERSION: "v0.10.0"
+  REPO_KNOWLEDGE_TOOLKIT_VERSION: "v0.10.1"
   REPO_KNOWLEDGE_ENFORCEMENT: "advisory"
 
 repository-knowledge:documentation-impact:

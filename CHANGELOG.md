@@ -4,6 +4,10 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-09-07
+
+### Changed
+
 - Generalized opt-in strict Repository Knowledge preflight to Codex, Claude Code, Cursor, and Antigravity IDE through repeatable `--agent-preflight AGENT=strict` configuration. Each adapter now registers its native managed tool gate, emits its host-specific denial response, binds sessions to adapter and conversation, and receives strict gate checks in `doctor` and `doctor --live-hooks`.
 - Added cross-host strict-preflight TDD evidence and a three-trial-per-host manual regression protocol; `--antigravity-preflight` remains a compatibility alias.
 

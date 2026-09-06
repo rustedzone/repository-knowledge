@@ -59,7 +59,7 @@ repo-knowledge install \
   --target /path/to/service-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.10.0
+  --ref v0.10.1
 ```
 
 Select Claude Code, Antigravity IDE, or Cursor with their canonical names:
@@ -168,7 +168,7 @@ Download and verify the new release binary, then run:
 repo-knowledge update \
   --target /path/to/service-repository \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.10.0
+  --ref v0.10.1
 ```
 
 When `--agent` and `--all-agents` are omitted, `update` keeps the adapter selection recorded by the existing installation. Supply one or more `--agent` options to select a subset, or `--all-agents` to switch the installation to every currently supported adapter. Unmodified obsolete toolkit-managed adapter files are removed, modified obsolete files are preserved and reported, and consumer-owned instructions remain untouched.
@@ -193,13 +193,13 @@ permissions:
 
 jobs:
   documentation-impact:
-    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.10.0
+    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.10.1
     with:
-      toolkit-version: v0.10.0
+      toolkit-version: v0.10.1
       enforcement: advisory
 ```
 
-Update `uses` and `toolkit-version` together. The workflow ref selects the CI orchestration; `toolkit-version` selects the checksummed and attested binary plus `repo-knowledge-github-adapter.sh` from GitHub Releases. The example uses the convenient release tag. Organizations requiring immutable workflow references should replace `@v0.10.0` with the full commit SHA for that release while retaining `toolkit-version: v0.10.0`.
+Update `uses` and `toolkit-version` together. The workflow ref selects the CI orchestration; `toolkit-version` selects the checksummed and attested binary plus `repo-knowledge-github-adapter.sh` from GitHub Releases. The example uses the convenient release tag. Organizations requiring immutable workflow references should replace `@v0.10.1` with the full commit SHA for that release while retaining `toolkit-version: v0.10.1`.
 
 The reusable workflow:
 
@@ -222,12 +222,12 @@ Add this to the consuming `.gitlab-ci.yml`:
 ```yaml
 include:
   - project: engineering/repository-knowledge
-    ref: v0.10.0
+    ref: v0.10.1
     file: /adapters/gitlab/documentation-check.yml
 
 variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: "12345"
-  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.10.0
+  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.10.1
   REPO_KNOWLEDGE_ENFORCEMENT: advisory
 ```
 

@@ -59,7 +59,7 @@ repo-knowledge install \
   --target /path/to/service-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.8.0
+  --ref v0.9.0
 ```
 
 Select Claude Code, Antigravity IDE, or Cursor with their canonical names:
@@ -93,6 +93,19 @@ repo-knowledge install \
 
 The aliases `claude` and `antigravity` are accepted and recorded in `.repo-knowledge/toolkit.json` as `claude-code` and `antigravity-ide`.
 
+Installation also registers a native repository preflight hook for each selected adapter:
+
+| Agent | Shared hook container | Event |
+| --- | --- | --- |
+| Codex | `.codex/hooks.json` | `SessionStart` |
+| Claude Code | `.claude/settings.json` | `SessionStart` |
+| Antigravity IDE | `.agents/hooks.json` | `PreInvocation` |
+| Cursor | `.cursor/hooks.json` | `sessionStart` |
+
+The installer merges only its exact `repo-knowledge hook-context` entry. Existing setting values and consumer hooks are preserved, and switching adapters removes only the obsolete toolkit entry. Invalid existing JSON stops installation rather than overwriting the file.
+
+The hook command requires `repo-knowledge` to resolve on the host process's `PATH`. Review and trust the new project hook when the agent asks; do not bypass the host's trust boundary. Start a new session after installation. Cursor normally reloads a saved hook file, but restarting the host is the reliable fallback. If a hook cannot run, the native project rule still requires a manual preflight and the agent should not silently install a missing binary. Permission-gated binary recovery applies only when the current task actually needs a CLI operation.
+
 Then:
 
 ```bash
@@ -100,6 +113,8 @@ repo-knowledge doctor --target /path/to/service-repository
 repo-knowledge scan --target /path/to/service-repository
 repo-knowledge rebuild --target /path/to/service-repository
 ```
+
+`doctor` checks the rule, skill, managed-file digests, and native hook registration for every selected adapter. In a new repository task, the agent's first progress update should include `Repository knowledge preflight: loaded` and the selected documentation routes. That receipt is the user-visible confirmation that activation happened; native hooks remain a guardrail rather than an absolute enforcement mechanism.
 
 `scan` and `rebuild` produce structural discovery artifacts, not human-readable repository documentation. To generate documentation, ask the installed agent to classify every repository shape, inspect evidence across all material surfaces, write detailed profile-specific guides, populate `docs/index.md`, and record verified capability routes. For example:
 
@@ -117,7 +132,7 @@ Edit `.repo-knowledge/repository.json` to declare verified capabilities and rout
 
 ## Existing documentation
 
-Installation preserves all existing docs and consumer-owned agent instructions. If `docs/index.md` already exists, it is untouched. If it does not exist, the toolkit adds a routing index alongside existing files. The Codex adapter replaces only its marked block in `AGENTS.md`; unrelated content remains intact. Claude Code, Antigravity IDE, and Cursor use dedicated toolkit-managed rule files, leaving other files in `.claude/rules/`, `.agents/rules/`, and `.cursor/rules/` untouched. Existing documentation does not need to be relocated into a prescribed taxonomy.
+Installation preserves all existing docs and consumer-owned agent instructions. If `docs/index.md` already exists, it is untouched. If it does not exist, the toolkit adds a routing index alongside existing files. The Codex adapter replaces only its marked block in `AGENTS.md`; unrelated content remains intact. Claude Code, Antigravity IDE, and Cursor use dedicated toolkit-managed rule files, leaving other files in `.claude/rules/`, `.agents/rules/`, and `.cursor/rules/` untouched. Native hook JSON files are shared containers; only the toolkit's nested registration is managed. Existing documentation does not need to be relocated into a prescribed taxonomy.
 
 ## Updating
 
@@ -127,7 +142,7 @@ Download and verify the new release binary, then run:
 repo-knowledge update \
   --target /path/to/service-repository \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.8.0
+  --ref v0.9.0
 ```
 
 When `--agent` and `--all-agents` are omitted, `update` keeps the adapter selection recorded by the existing installation. Supply one or more `--agent` options to select a subset, or `--all-agents` to switch the installation to every currently supported adapter. Unmodified obsolete toolkit-managed adapter files are removed, modified obsolete files are preserved and reported, and consumer-owned instructions remain untouched.
@@ -152,13 +167,13 @@ permissions:
 
 jobs:
   documentation-impact:
-    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.8.0
+    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.9.0
     with:
-      toolkit-version: v0.8.0
+      toolkit-version: v0.9.0
       enforcement: advisory
 ```
 
-Update `uses` and `toolkit-version` together. The workflow ref selects the CI orchestration; `toolkit-version` selects the checksummed and attested binary plus `repo-knowledge-github-adapter.sh` from GitHub Releases. The example uses the convenient release tag. Organizations requiring immutable workflow references should replace `@v0.8.0` with the full commit SHA for that release while retaining `toolkit-version: v0.8.0`.
+Update `uses` and `toolkit-version` together. The workflow ref selects the CI orchestration; `toolkit-version` selects the checksummed and attested binary plus `repo-knowledge-github-adapter.sh` from GitHub Releases. The example uses the convenient release tag. Organizations requiring immutable workflow references should replace `@v0.9.0` with the full commit SHA for that release while retaining `toolkit-version: v0.9.0`.
 
 The reusable workflow:
 
@@ -181,12 +196,12 @@ Add this to the consuming `.gitlab-ci.yml`:
 ```yaml
 include:
   - project: engineering/repository-knowledge
-    ref: v0.8.0
+    ref: v0.9.0
     file: /adapters/gitlab/documentation-check.yml
 
 variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: "12345"
-  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.8.0
+  REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.9.0
   REPO_KNOWLEDGE_ENFORCEMENT: advisory
 ```
 

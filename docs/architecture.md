@@ -9,9 +9,9 @@ shared contract + schemas + defaults
               |
        +------+------+
        |             |
-  prompt adapter   SCM/CI adapter
+  agent adapter    SCM/CI adapter
        |             |
- native rule + skill   Go binary over Git diff
+ hook + rule + skill   Go binary over Git diff
 ```
 
 The prompt funnel loads routed knowledge before assessment, verifies material claims, and reconciles documentation after implementation. The SCM funnel sees changes that bypass agents and validates whether the diff contains a documentation change or an explicit, diff-bound impact decision.
@@ -33,7 +33,7 @@ The installed skill closes the cloned-repository gap without making installation
 | `skills/` | Shared prompt routing, semantic decision behavior, and permission-gated missing-binary recovery helpers for supported agents. |
 | `assets.go` | Compile toolkit-managed resources into the release binary. |
 | `cmd/` | CLI interface and output contracts. |
-| `internal/toolkit/` | Installation, inventory, validation, impact, audit, and rebuild mechanics. |
+| `internal/toolkit/` | Installation, native-hook context and merging, inventory, validation, impact, audit, and rebuild mechanics. |
 | `templates/` | Initial consumer-owned files, native agent rules, and the managed Codex `AGENTS.md` block. |
 | `adapters/` | Tested GitHub and GitLab SCM/runtime glue that invokes the released binary. |
 | `.github/workflows/documentation-check.yml` | Public reusable workflow that supplies GitHub checkout, release verification, permissions, and report upload. |
@@ -42,7 +42,7 @@ The installed skill closes the cloned-repository gap without making installation
 
 ## Ownership and upgrades
 
-Installation records every toolkit-owned file and digest in `.repo-knowledge/toolkit.json`. `update` replaces installed skills, adapter rules, policy snapshots, schemas, and the managed Codex `AGENTS.md` block. It does not replace `.repo-knowledge/repository.json`, consumer rules, documentation, scan state, rebuild proposals, or impact decisions. Without `--agent` or `--all-agents`, update retains the adapters recorded in the existing manifest. Explicit `--agent` values select a subset; `--all-agents` resolves to the complete canonical adapter list before the same install/update reconciliation runs.
+Installation records every fully toolkit-owned file and digest in `.repo-knowledge/toolkit.json`. `update` replaces installed skills, adapter rules, policy snapshots, schemas, and the managed Codex `AGENTS.md` block. Native hook containers are shared files: the toolkit merges or removes only its exact `repo-knowledge hook-context` registration and preserves unrelated keys and hooks. It does not replace `.repo-knowledge/repository.json`, consumer rules, documentation, scan state, rebuild proposals, or impact decisions. Without `--agent` or `--all-agents`, update retains the adapters recorded in the existing manifest. Explicit `--agent` values select a subset; `--all-agents` resolves to the complete canonical adapter list before the same install/update reconciliation runs.
 
 Consumers pin a release tag. They update by running the new binary and changing the GitHub workflow tag and toolkit input or GitLab include and package version in the same merge request. GitHub tag builds publish checksummed, attested binaries and the GitHub adapter; the GitLab pipeline remains available for registry-based distribution. The binary follows Semantic Versioning precedence and refuses a version downgrade, including a release-to-prerelease downgrade, unless `--allow-downgrade` is explicit.
 
@@ -64,23 +64,28 @@ The GitHub reusable workflow has read-only contents and attestation permissions,
 
 ## Prompt-driven lifecycle
 
-The Go process does not intercept prompts. Installation creates the proactive adapter:
+The Go process does not run as a daemon or parse prompt transcripts. Installation creates a native lifecycle preflight plus a portable rule fallback:
 
 ```text
-user prompt
-    -> selected agent loads its native project rule
-       Codex: AGENTS.md managed block
-       Claude Code: .claude/rules/repository-knowledge.md
-       Antigravity IDE: .agents/rules/repository-knowledge.md
-       Cursor: .cursor/rules/repository-knowledge.mdc
-    -> native rule routes repository work to the installed skill
+agent session or invocation
+    -> selected host runs repo-knowledge hook-context
+       Codex: SessionStart in .codex/hooks.json
+       Claude Code: SessionStart in .claude/settings.json
+       Antigravity IDE: PreInvocation in .agents/hooks.json
+       Cursor: sessionStart in .cursor/hooks.json
+    -> hook resolves the repository root from .repo-knowledge/toolkit.json
+    -> hook injects the managed contract plus consumer routing config and docs/index.md
+    -> native project rule routes repository work to the installed skill and supplies a manual fallback
+    -> agent reports Repository knowledge preflight: loaded and the selected routes
     -> skill loads contract, repository metadata, and docs/index.md
     -> agent verifies evidence and either:
        - performs repository work and reconciles documentation impact, or
        - classifies repository shapes and writes detailed profile-specific guides and verified routes for a documentation request
 ```
 
-This keeps prompt semantics in the agent adapter while deterministic mechanics remain reusable by agents, developers, and CI.
+Codex and Claude Code receive text context, Cursor receives `additional_context`, and Antigravity receives an `injectSteps` payload. Antigravity gets the complete preflight on the first invocation and a bounded reminder later to avoid repeatedly injecting the whole index. The injected consumer-owned configuration and documentation are explicitly labeled as evidence rather than executable instructions.
+
+This keeps behavior semantics in the agent adapter while deterministic context loading remains reusable and testable. It is not a security or absolute-compliance boundary: project hook trust and enablement remain under the host, a missing `repo-knowledge` executable causes a visible hook failure, and supported hosts may fail open. The native rule still directs a manual preflight, `doctor` detects missing registrations, and the first-update receipt makes activation observable. Binary recovery remains permission-gated and is attempted only when a task needs a CLI operation.
 
 Evidence selection is claim-specific as well as precedence-based. Existing prose and agent instruction files route discovery and preserve intent, but they do not establish current technical state. The skill directs agents to manifests and lockfiles for dependency declarations and resolution, effective configuration for runtime selection, tests and implementation for behavior, schemas and migrations for data, and deployment definitions for declared operations. Objective prose mismatches become `verified_stale`; disagreement between authoritative current sources remains a `conflict` requiring the contract's normal handling.
 

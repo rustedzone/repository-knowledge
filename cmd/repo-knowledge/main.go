@@ -29,10 +29,14 @@ type commandOutcome struct {
 }
 
 func main() {
-	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+	os.Exit(runWithInput(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
 func run(arguments []string, stdout, stderr io.Writer) int {
+	return runWithInput(arguments, strings.NewReader("{}"), stdout, stderr)
+}
+
+func runWithInput(arguments []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	if len(arguments) == 0 {
 		printUsage(stderr)
 		return 2
@@ -45,7 +49,7 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 		printUsage(stdout)
 		return 0
 	}
-	outcome, err := dispatch(arguments, stderr)
+	outcome, err := dispatch(arguments, stdin, stderr)
 	if err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return 0
@@ -70,7 +74,7 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 	return outcome.exitCode
 }
 
-func dispatch(arguments []string, stderr io.Writer) (commandOutcome, error) {
+func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOutcome, error) {
 	command := arguments[0]
 	args := arguments[1:]
 	switch command {
@@ -119,6 +123,18 @@ func dispatch(arguments []string, stderr io.Writer) (commandOutcome, error) {
 			exitCode = 1
 		}
 		return commandOutcome{value: value, exitCode: exitCode, json: *jsonOutput}, err
+	case "hook-context":
+		flags := newFlagSet(command, stderr)
+		target := flags.String("target", ".", "repository path or a path nested below it")
+		agent := flags.String("agent", "", "agent hook protocol: codex, claude-code, antigravity-ide, or cursor")
+		if err := flags.Parse(args); err != nil {
+			return commandOutcome{}, err
+		}
+		if strings.TrimSpace(*agent) == "" {
+			return commandOutcome{}, fmt.Errorf("--agent is required")
+		}
+		value, err := toolkit.HookContext(*target, *agent, stdin)
+		return commandOutcome{value: value}, err
 	case "audit", "impact", "validate-doc-impact":
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository root")
@@ -184,7 +200,15 @@ func newFlagSet(name string, output io.Writer) *flag.FlagSet {
 func summarize(command string, value any) string {
 	switch result := value.(type) {
 	case toolkit.InstallResult:
-		return fmt.Sprintf("%s repository-knowledge %s in %s\nmanaged files: %d\nrepository-owned files created: %d", result.Action, result.Version, result.Target, result.ManagedFileCount, len(result.RepositoryOwnedFilesCreated))
+		lines := []string{
+			fmt.Sprintf("%s repository-knowledge %s in %s", result.Action, result.Version, result.Target),
+			fmt.Sprintf("managed files: %d", result.ManagedFileCount),
+			fmt.Sprintf("repository-owned files created: %d", len(result.RepositoryOwnedFilesCreated)),
+		}
+		if len(result.AgentHookRegistrations) > 0 {
+			lines = append(lines, "preflight hooks: "+strings.Join(result.AgentHookRegistrations, ", "))
+		}
+		return strings.Join(lines, "\n")
 	case toolkit.ScanState:
 		return fmt.Sprintf("scan complete: %d files, %d top-level modules, %d capability signals\nwrote .repo-knowledge/scan-state.json", result.FileCount, len(result.Modules), len(result.CapabilitySignals))
 	case toolkit.DoctorReport:
@@ -222,6 +246,8 @@ func summarize(command string, value any) string {
 			return fmt.Sprintf("structural inventory applied: %s\nthis does not generate semantic documentation\nnext: %s", result.GeneratedInventory, result.NextStep)
 		}
 		return fmt.Sprintf("structural inventory proposal: %s\nthis does not generate semantic documentation\nnext: review the proposal, optionally rerun with --apply, then %s", result.Proposal, result.NextStep)
+	case toolkit.HookContextResult:
+		return result.Output
 	default:
 		data, _ := json.MarshalIndent(value, "", "  ")
 		return string(data)
@@ -231,5 +257,5 @@ func summarize(command string, value any) string {
 func printUsage(output io.Writer) {
 	name := filepath.Base(os.Args[0])
 	fmt.Fprintf(output, "Usage: %s <command> [options]\n\n", name)
-	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, version")
+	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, version")
 }

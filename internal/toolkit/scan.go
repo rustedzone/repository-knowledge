@@ -78,7 +78,7 @@ func Scan(root string, write bool) (ScanState, error) {
 	filtered := entries[:0]
 	for _, entry := range entries {
 		value := filepath.ToSlash(entry.Path)
-		if isToolkitManagedKnowledgePath(value) {
+		if isToolkitManagedScanPath(root, value) {
 			continue
 		}
 		filtered = append(filtered, entry)
@@ -210,6 +210,26 @@ func isToolkitManagedKnowledgePath(value string) bool {
 		value == ".agents/rules/repository-knowledge.md" ||
 		value == ".claude/rules/repository-knowledge.md" ||
 		value == ".cursor/rules/repository-knowledge.mdc"
+}
+
+func isToolkitManagedScanPath(root, value string) bool {
+	if isToolkitManagedKnowledgePath(value) {
+		return true
+	}
+	for agent, relative := range hookConfigPaths {
+		if value != relative {
+			continue
+		}
+		config, _, err := readHookConfig(filepath.Join(root, filepath.FromSlash(relative)))
+		if err != nil {
+			return false
+		}
+		if err := removeAgentHookFromConfig(config, agent); err != nil {
+			return false
+		}
+		return len(config) == 0
+	}
+	return false
 }
 
 func trackedEntries(root string) ([]TrackedEntry, error) {

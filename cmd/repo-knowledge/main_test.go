@@ -74,14 +74,45 @@ func TestRunInstallAllAgents(t *testing.T) {
 	}
 	for _, relative := range []string{
 		"AGENTS.md",
+		".codex/hooks.json",
 		".agents/rules/repository-knowledge.md",
+		".agents/hooks.json",
 		".claude/rules/repository-knowledge.md",
+		".claude/settings.json",
 		".cursor/rules/repository-knowledge.mdc",
+		".cursor/hooks.json",
 	} {
 		path := filepath.Join(root, filepath.FromSlash(relative))
 		if info, err := os.Stat(path); err != nil || !info.Mode().IsRegular() {
 			t.Fatalf("installed adapter file %s: info = %v, error = %v", relative, info, err)
 		}
+	}
+}
+
+func TestRunHookContextUsesAgentProtocol(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{"install", "--target", root, "--all-agents"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("run(install) code = %d, stderr = %q", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	code := runWithInput(
+		[]string{"hook-context", "--target", root, "--agent", "cursor"},
+		strings.NewReader("{}"), &stdout, &stderr,
+	)
+	if code != 0 {
+		t.Fatalf("run(hook-context) code = %d, stderr = %q", code, stderr.String())
+	}
+	var output struct {
+		AdditionalContext string `json:"additional_context"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(stdout.Bytes()), &output); err != nil {
+		t.Fatalf("parse hook output %q: %v", stdout.String(), err)
+	}
+	if !strings.Contains(output.AdditionalContext, "Repository Knowledge Preflight") {
+		t.Fatalf("additional context = %q", output.AdditionalContext)
 	}
 }
 

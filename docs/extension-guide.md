@@ -16,13 +16,14 @@ When changing installed managed assets, keep `install` and `update` behavior sym
 
 ## Adding an agent adapter
 
-An agent adapter consists of the smallest native always-on rule that routes repository work to the shared skill, plus a native project skill destination. Keep the lifecycle semantics in `skills/repository-knowledge/`; adapter rules should route to that skill rather than duplicate it.
+An agent adapter consists of the smallest native always-on rule that routes repository work to the shared skill, a native project skill destination, and—when the host supports it—a lifecycle hook that injects the preflight before normal discovery. Keep semantic behavior in `skills/repository-knowledge/`; adapter rules should route to that skill rather than duplicate it, while hook protocol encoding belongs in `internal/toolkit`.
 
 When adding an adapter:
 
 1. Add its canonical `--agent` name and any deliberate aliases to `internal/toolkit/install.go`.
    Add the canonical name to `supportedAgentAdapters` so `--all-agents` includes it in stable manifest order.
 2. Map embedded rules and the shared skill to the agent's documented project locations.
-3. Add adapter-aware `doctor` checks and exclude toolkit-managed adapter files from scan inventory and documentation-impact classification.
-4. Verify single-adapter, multi-adapter, update-preservation, explicit adapter-switch, and consumer-rule preservation behavior.
-5. Document the native paths and installation command.
+3. If the host has lifecycle hooks, register the earliest context-injection event, encode the host's output protocol in `hook-context`, preserve every unrelated field in shared hook files, and keep host trust prompts visible.
+4. Add adapter-aware `doctor` checks. Exclude fully toolkit-managed adapter files from scan and impact analysis; exclude shared hook containers only when they contain no consumer-owned configuration.
+5. Verify single-adapter, multi-adapter, update-preservation, explicit adapter-switch, malformed-hook, consumer-hook preservation, context-output, and missing-registration behavior.
+6. Document the native paths, trust/reload behavior, binary-on-PATH requirement, and installation command.

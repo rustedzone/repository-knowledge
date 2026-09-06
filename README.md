@@ -13,14 +13,14 @@ Documentation is an active routing library, not a source of truth that overrides
 
 ## Agent compatibility
 
-Repository Knowledge provides proactive, prompt-triggered integration for Codex, Claude Code, Antigravity IDE, and Cursor. The Go executable installs each selected agent's native project rule and skill files.
+Repository Knowledge provides proactive integration for Codex, Claude Code, Antigravity IDE, and Cursor. The Go executable installs each selected agent's native project rule, skill files, and lifecycle preflight hook.
 
 | `--agent` value | Proactive integration |
 | --- | --- |
-| `codex` | Managed block in `AGENTS.md` and skill in `.agents/skills/repository-knowledge/`. |
-| `claude-code` | Rule in `.claude/rules/repository-knowledge.md` and skill in `.claude/skills/repository-knowledge/`. |
-| `antigravity-ide` | Rule in `.agents/rules/repository-knowledge.md` and skill in `.agents/skills/repository-knowledge/`. |
-| `cursor` | Always-applied rule in `.cursor/rules/repository-knowledge.mdc` and skill in `.cursor/skills/repository-knowledge/`. |
+| `codex` | Managed block in `AGENTS.md`, skill in `.agents/skills/repository-knowledge/`, and [`SessionStart`](https://developers.openai.com/codex/hooks) entry in `.codex/hooks.json`. |
+| `claude-code` | Rule and skill under `.claude/`, plus a [`SessionStart`](https://code.claude.com/docs/en/hooks) entry merged into `.claude/settings.json`. |
+| `antigravity-ide` | Rule and skill under `.agents/`, plus a [`PreInvocation`](https://antigravity.google/docs/ide/hooks/) entry merged into `.agents/hooks.json`. |
+| `cursor` | Always-applied rule and skill under `.cursor/`, plus a [`sessionStart`](https://prod.cursor.com/docs/hooks) entry merged into `.cursor/hooks.json`. |
 
 The Cursor paths follow its official [Project Rules](https://docs.cursor.com/context/rules) and [Agent Skills](https://cursor.com/docs/skills) conventions.
 
@@ -40,7 +40,9 @@ repo-knowledge install --target . \
   --agent cursor
 ```
 
-The binary does not run as a prompt-interception daemon. Proactive behavior comes from the installed native rule directing the selected agent to load the repository-knowledge skill when a repository task begins.
+The binary does not run as a daemon and does not inspect prompt transcripts. Each native lifecycle hook runs `repo-knowledge hook-context` to inject the installed contract, repository routing configuration, and `docs/index.md` before ordinary repository discovery. The rule remains the portable fallback, and the agent must emit an observable `Repository knowledge preflight: loaded` progress receipt naming the selected routes.
+
+This is a strong activation guardrail, not an absolute enforcement boundary. The binary must resolve on the agent host's `PATH`, project hooks must be enabled and trusted where the host requires review, and the host may surface hook failures without blocking a session. `repo-knowledge doctor --target .` validates the configured entries; the agent's progress receipt makes a skipped preflight visible. Existing hook configuration is preserved because the installer owns only its exact nested command entry, not the surrounding JSON file.
 
 ## Generate documentation people can learn from
 
@@ -167,12 +169,16 @@ repo-knowledge install --target . --all-agents
 docs/index.md                                  created only when absent
 
 AGENTS.md                                      Codex only: managed routing block
+.codex/hooks.json                              Codex shared hook container; toolkit manages one SessionStart entry
 .agents/skills/repository-knowledge/           Codex or Antigravity IDE skill
 .claude/rules/repository-knowledge.md          Claude Code routing rule
 .claude/skills/repository-knowledge/           Claude Code skill
+.claude/settings.json                          Claude Code shared settings; toolkit manages one SessionStart entry
 .agents/rules/repository-knowledge.md          Antigravity IDE routing rule
+.agents/hooks.json                             Antigravity shared hook container; toolkit manages one named entry
 .cursor/rules/repository-knowledge.mdc         Cursor always-applied routing rule
 .cursor/skills/repository-knowledge/           Cursor skill
+.cursor/hooks.json                             Cursor shared hook container; toolkit manages one sessionStart entry
 ```
 
 It does **not**:
@@ -193,7 +199,7 @@ The skill cannot be installed usefully as only `SKILL.md`: it depends on the sha
 repo-knowledge doctor --target .
 ```
 
-After this passes, open the selected agent in the repository and use it normally. For repository-related prompts, its installed rule routes work through the repository-knowledge skill automatically.
+After this passes, review/trust the project hook if the host asks, then open a new agent session in the repository. For repository-related prompts, confirm the first progress update reports `Repository knowledge preflight: loaded` and names the selected routes.
 
 ### Step 4: Optionally create a structural appendix
 
@@ -222,9 +228,9 @@ jobs:
     permissions:
       contents: read
       attestations: read
-    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.8.0
+    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.9.0
     with:
-      toolkit-version: v0.8.0
+      toolkit-version: v0.9.0
       enforcement: advisory
 ```
 
@@ -239,7 +245,7 @@ repo-knowledge install \
   --target /path/to/your-repository \
   --agent codex \
   --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.8.0
+  --ref v0.9.0
 ```
 
 ## V1 contents
@@ -276,10 +282,11 @@ See [Installation](docs/installation.md), [Testing](docs/testing.md), and [Archi
 | `impact` | Classify a diff and calculate its stable material-path fingerprint. |
 | `acknowledge` | Record a `required` or `not_required` decision bound to that fingerprint. |
 | `validate-doc-impact` | Apply advisory, acknowledgment, or explicitly mapped enforced checks. |
+| `hook-context` | Internal host-hook command that emits the bounded repository preflight in the selected agent's native protocol. |
 
 ## Proactive agent behavior
 
-For each selected agent, the binary installs a native project rule plus the repository-knowledge skill. The rule instructs the agent to start from `docs/index.md`, select the smallest relevant knowledge set for ordinary work, verify important claims against repository evidence, and reconcile documentation impact after implementation. Full documentation-generation requests instead require repository-wide classification, evidence-proportional coverage, detailed profile-specific guides, a populated index, and verified capability routes. The binary supports this lifecycle but does not run as a prompt-interception daemon.
+For each selected agent, the binary installs a native project rule, the repository-knowledge skill, and a lifecycle hook. The hook injects the routing preflight; the rule supplies the manual fallback and instructs the agent to start from `docs/index.md`, select the smallest relevant knowledge set for ordinary work, verify important claims against repository evidence, and reconcile documentation impact after implementation. The first progress update must confirm the preflight and selected routes. Full documentation-generation requests instead require repository-wide classification, evidence-proportional coverage, detailed profile-specific guides, a populated index, and verified capability routes. The binary supports this lifecycle without running as a daemon or parsing prompt transcripts.
 
 ## Continuous integration and releases
 
@@ -300,7 +307,7 @@ The GitLab reusable include downloads the pinned Linux binary from the toolkit p
 - A central knowledge registry, embeddings, or vector retrieval.
 - Automated rewriting of semantic documentation during rebuild.
 
-Versions follow Semantic Versioning; consumers pin tags such as `v0.8.0`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
+Versions follow Semantic Versioning; consumers pin tags such as `v0.9.0`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
 
 ## License
 

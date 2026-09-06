@@ -30,6 +30,8 @@ Knowledge:
 
 Evidence anchors:
 - `internal/toolkit/install.go`
+- `internal/toolkit/hook_config.go`
+- `internal/toolkit/hook_context.go`
 - `cmd/repo-knowledge/main.go`
 - `Makefile`
 - `templates/`
@@ -54,6 +56,9 @@ Knowledge:
 Evidence anchors:
 - `skills/repository-knowledge/`
 - `policy/contract.json`
+- `templates/AGENTS.md`
+- `templates/repository-knowledge-rule.md`
+- `templates/repository-knowledge-cursor-rule.mdc`
 
 ## Agent evaluation
 

@@ -40,6 +40,7 @@ type InstallResult struct {
 	RepositoryOwnedFilesPreserved  bool     `json:"repository_owned_files_preserved"`
 	ObsoleteManagedFilesRemoved    []string `json:"obsolete_managed_files_removed"`
 	ModifiedObsoleteFilesPreserved []string `json:"modified_obsolete_managed_files_preserved"`
+	AgentHookRegistrations         []string `json:"agent_hook_registrations"`
 }
 
 type RebuildResult struct {

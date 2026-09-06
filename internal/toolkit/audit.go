@@ -43,18 +43,26 @@ func Doctor(root string) (DoctorReport, error) {
 		agentsPath := filepath.Join(root, "AGENTS.md")
 		agentsData, _ := os.ReadFile(agentsPath)
 		add("codex-entry-contract", strings.Contains(string(agentsData), ManagedBegin), "managed AGENTS.md block")
+		ok, detail := hasAgentHookRegistration(root, agentCodex)
+		add("codex-preflight-hook", ok, detail)
 	}
 	if contains(adapters, agentClaudeCode) {
 		add("claude-code-skill", regularFile(filepath.Join(root, ".claude", "skills", "repository-knowledge", "SKILL.md")), ".claude/skills/repository-knowledge/SKILL.md")
 		add("claude-code-entry-contract", regularFile(filepath.Join(root, ".claude", "rules", "repository-knowledge.md")), ".claude/rules/repository-knowledge.md")
+		ok, detail := hasAgentHookRegistration(root, agentClaudeCode)
+		add("claude-code-preflight-hook", ok, detail)
 	}
 	if contains(adapters, agentAntigravityIDE) {
 		add("antigravity-ide-skill", regularFile(filepath.Join(root, ".agents", "skills", "repository-knowledge", "SKILL.md")), ".agents/skills/repository-knowledge/SKILL.md")
 		add("antigravity-ide-entry-contract", regularFile(filepath.Join(root, ".agents", "rules", "repository-knowledge.md")), ".agents/rules/repository-knowledge.md")
+		ok, detail := hasAgentHookRegistration(root, agentAntigravityIDE)
+		add("antigravity-ide-preflight-hook", ok, detail)
 	}
 	if contains(adapters, agentCursor) {
 		add("cursor-skill", regularFile(filepath.Join(root, ".cursor", "skills", "repository-knowledge", "SKILL.md")), ".cursor/skills/repository-knowledge/SKILL.md")
 		add("cursor-entry-contract", regularFile(filepath.Join(root, ".cursor", "rules", "repository-knowledge.mdc")), ".cursor/rules/repository-knowledge.mdc")
+		ok, detail := hasAgentHookRegistration(root, agentCursor)
+		add("cursor-preflight-hook", ok, detail)
 	}
 
 	configPath := filepath.Join(root, ".repo-knowledge", "repository.json")

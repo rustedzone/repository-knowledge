@@ -2,6 +2,20 @@
 
 All notable changes follow Keep a Changelog. Versions follow Semantic Versioning.
 
+## [0.9.0] - 2026-09-06
+
+### Added
+
+- Native lifecycle preflight hooks for Codex, Claude Code, Antigravity IDE, and Cursor, installed together with each selected rule and skill adapter.
+- Cross-host `hook-context` command that injects the installed contract, repository routing configuration, and documentation index using each host's native output protocol.
+- Doctor checks and regression coverage for hook registration, shared-container preservation, adapter switching, malformed JSON, nested repository paths, and host-specific context output.
+
+### Changed
+
+- Agent rules now require an observable first-update preflight receipt and retain a manual loading fallback when native hook context is unavailable.
+- Hook configuration is partially managed: install and update merge or remove only the toolkit command while preserving unrelated consumer settings and hooks.
+- Structural scanning ignores a shared hook container only when it contains no consumer-owned configuration.
+
 ## [0.8.0] - 2026-08-26
 
 ### Added

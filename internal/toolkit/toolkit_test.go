@@ -57,6 +57,7 @@ func TestInstallSupportsAgentAdapters(t *testing.T) {
 			expectedFiles: []string{
 				"AGENTS.md",
 				".agents/skills/repository-knowledge/SKILL.md",
+				".codex/hooks.json",
 			},
 			unexpectedFiles: []string{
 				".claude/skills/repository-knowledge/SKILL.md",
@@ -70,6 +71,7 @@ func TestInstallSupportsAgentAdapters(t *testing.T) {
 			expectedFiles: []string{
 				".claude/rules/repository-knowledge.md",
 				".claude/skills/repository-knowledge/SKILL.md",
+				".claude/settings.json",
 			},
 			unexpectedFiles: []string{
 				"AGENTS.md",
@@ -83,6 +85,7 @@ func TestInstallSupportsAgentAdapters(t *testing.T) {
 			expectedFiles: []string{
 				".claude/rules/repository-knowledge.md",
 				".claude/skills/repository-knowledge/SKILL.md",
+				".claude/settings.json",
 			},
 		},
 		{
@@ -92,6 +95,7 @@ func TestInstallSupportsAgentAdapters(t *testing.T) {
 			expectedFiles: []string{
 				".agents/rules/repository-knowledge.md",
 				".agents/skills/repository-knowledge/SKILL.md",
+				".agents/hooks.json",
 			},
 			unexpectedFiles: []string{
 				"AGENTS.md",
@@ -105,6 +109,7 @@ func TestInstallSupportsAgentAdapters(t *testing.T) {
 			expectedFiles: []string{
 				".agents/rules/repository-knowledge.md",
 				".agents/skills/repository-knowledge/SKILL.md",
+				".agents/hooks.json",
 			},
 		},
 		{
@@ -114,6 +119,7 @@ func TestInstallSupportsAgentAdapters(t *testing.T) {
 			expectedFiles: []string{
 				".cursor/rules/repository-knowledge.mdc",
 				".cursor/skills/repository-knowledge/SKILL.md",
+				".cursor/hooks.json",
 			},
 			unexpectedFiles: []string{
 				"AGENTS.md",
@@ -172,11 +178,15 @@ func TestInstallSupportsMultipleAgentAdapters(t *testing.T) {
 	}
 	for _, relative := range []string{
 		"AGENTS.md",
+		".codex/hooks.json",
 		".agents/rules/repository-knowledge.md",
+		".agents/hooks.json",
 		".agents/skills/repository-knowledge/SKILL.md",
 		".claude/rules/repository-knowledge.md",
+		".claude/settings.json",
 		".claude/skills/repository-knowledge/SKILL.md",
 		".cursor/rules/repository-knowledge.mdc",
+		".cursor/hooks.json",
 		".cursor/skills/repository-knowledge/SKILL.md",
 	} {
 		assertFile(t, filepath.Join(root, filepath.FromSlash(relative)))

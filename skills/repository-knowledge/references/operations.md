@@ -6,6 +6,8 @@ Run `repo-knowledge install --target PATH` for the default Codex adapter. Use `-
 
 Use `repo-knowledge install --target PATH --all-agents` to install every supported adapter. `--all-agents` is mutually exclusive with `--agent`. On update, omitting both preferences retains the manifest's current selection; `update --all-agents` deliberately expands it to the complete canonical list.
 
+Each selected adapter also receives a native lifecycle preflight registration in its documented project hook container. The toolkit manages only its exact nested command and preserves unrelated consumer hook configuration. The hook needs `repo-knowledge` on the host PATH and may require host review or trust before it runs. After installation, run `doctor`, start a fresh agent session, and confirm the first progress update reports `Repository knowledge preflight: loaded` with the selected routes. If native context is unavailable, follow the installed rule's manual preflight; do not silently bootstrap a missing binary.
+
 Installation preserves existing documentation, repository-owned configuration, and unrelated agent rules. It creates a routing index only when one does not exist. Codex uses a managed block in `AGENTS.md`; Claude Code uses `.claude/rules/repository-knowledge.md`; Antigravity IDE uses `.agents/rules/repository-knowledge.md`; Cursor uses an always-applied `.cursor/rules/repository-knowledge.mdc` rule. Each adapter receives the skill in its native project skill directory.
 
 ## Scan

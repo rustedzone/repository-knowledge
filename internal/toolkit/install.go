@@ -87,9 +87,16 @@ func Install(options InstallOptions) (InstallResult, error) {
 	if options.Update && !options.AllowDowngrade && compareVersions(repositoryknowledge.Version(), oldManifest.ToolkitVersion) < 0 {
 		return result, fmt.Errorf("refusing to downgrade toolkit from %s to %s without --allow-downgrade", oldManifest.ToolkitVersion, repositoryknowledge.Version())
 	}
+	hookRegistrations, hookMutations, err := prepareAgentHooks(target, oldManifest.AgentAdapters, options.AgentAdapters, options.Update)
+	if err != nil {
+		return result, err
+	}
 
 	managed, err := installEmbeddedManagedFiles(target, options.AgentAdapters)
 	if err != nil {
+		return result, err
+	}
+	if err := applyAgentHooks(hookMutations); err != nil {
 		return result, err
 	}
 	removed, preserved, err := removeObsoleteManagedFiles(target, oldManifest, managed, options.Update)
@@ -134,6 +141,7 @@ func Install(options InstallOptions) (InstallResult, error) {
 		Ownership: map[string]string{
 			"managed_files":                  "replaced by repo-knowledge update",
 			"managed_codex_agents_block":     "replaced in place; other AGENTS.md content is preserved",
+			"managed_agent_hook_entries":     "merged in place; unrelated hook configuration is preserved",
 			"all_other_repository_knowledge": "owned by the consuming repository",
 		},
 	}
@@ -153,6 +161,7 @@ func Install(options InstallOptions) (InstallResult, error) {
 		RepositoryOwnedFilesPreserved:  manifestExists,
 		ObsoleteManagedFilesRemoved:    removed,
 		ModifiedObsoleteFilesPreserved: preserved,
+		AgentHookRegistrations:         hookRegistrations,
 	}, nil
 }
 

@@ -26,7 +26,7 @@ func TestGitHubAdapterValidatesCommittedRange(t *testing.T) {
 	runGitHubAdapterCommand(t, target, nil, "git", "init", "-q")
 	runGitHubAdapterCommand(t, target, nil, "git", "config", "user.email", "test@example.com")
 	runGitHubAdapterCommand(t, target, nil, "git", "config", "user.name", "Repository Knowledge Test")
-	runGitHubAdapterCommand(t, root, nil, binary, "install", "--target", target, "--source", "test", "--ref", "v0.8.0")
+	runGitHubAdapterCommand(t, root, nil, binary, "install", "--target", target, "--source", "test", "--ref", "v0.9.0")
 	runGitHubAdapterCommand(t, target, nil, "git", "add", ".")
 	runGitHubAdapterCommand(t, target, nil, "git", "commit", "-q", "-m", "baseline")
 	base := strings.TrimSpace(runGitHubAdapterCommand(t, target, nil, "git", "rev-parse", "HEAD"))

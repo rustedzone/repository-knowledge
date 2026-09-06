@@ -1,315 +1,113 @@
 # Repository Knowledge
 
-Repository Knowledge is a portable, versioned contract that helps coding agents reuse repository understanding and helps CI detect documentation drift from manually written changes.
+Repository Knowledge helps coding agents avoid stale architectural assumptions and makes documentation-impact decisions visible.
 
-It implements two funnels over one policy:
+It installs a shared evidence contract, repository-specific routing, and native lifecycle hooks for Codex, Claude Code, Antigravity IDE, and Cursor. Agents are directed to load the smallest relevant knowledge set, verify important claims against current source evidence, and reconcile documentation after implementation. Optional GitHub Actions and GitLab CI adapters make missing documentation-impact decisions visible when changes bypass an agent.
 
-```text
-prompt -> native agent rule -> knowledge skill -> verified assessment -> implementation -> reconciliation
-diff   -> Go validator -> documentation-impact validation -> report/pass/fail
-```
+> **Evidence status:** no causal outcome-benchmark trial has been published yet. The repository contains a reproducible control/treatment harness, but it does not currently claim a measured improvement in agent success, unsupported claims, duration, or token usage. See the [benchmark case](evals/benchmarks/frontend-onboarding/eval.json), [evaluation protocol](evals/README.md), and [raw-results directory](evals/results/README.md).
 
-Documentation is an active routing library, not a source of truth that overrides runtime behavior, tests, schemas, migrations, effective configuration, or implementation.
+**Try it:** install into a repository, run `doctor`, then start a new agent session. **Boundary:** Repository Knowledge makes evidence-first behavior cheaper and observable; it cannot guarantee that an agent complies with instructions or understands a repository correctly.
 
-## Agent compatibility
+## 60-second hostile demonstration
 
-Repository Knowledge provides proactive integration for Codex, Claude Code, Antigravity IDE, and Cursor. The Go executable installs each selected agent's native project rule, skill files, and lifecycle preflight hook.
+The committed frontend fixture presents an agent with several plausible but contradictory signals:
 
-| `--agent` value | Proactive integration |
+| Signal | What the repository actually establishes |
 | --- | --- |
-| `codex` | Managed block in `AGENTS.md`, skill in `.agents/skills/repository-knowledge/`, and [`SessionStart`](https://developers.openai.com/codex/hooks) entry in `.codex/hooks.json`. |
-| `claude-code` | Rule and skill under `.claude/`, plus a [`SessionStart`](https://code.claude.com/docs/en/hooks) entry merged into `.claude/settings.json`. |
-| `antigravity-ide` | Rule and skill under `.agents/`, plus a [`PreInvocation`](https://antigravity.google/docs/ide/hooks/) entry merged into `.agents/hooks.json`. |
-| `cursor` | Always-applied rule and skill under `.cursor/`, plus a [`sessionStart`](https://prod.cursor.com/docs/hooks) entry merged into `.cursor/hooks.json`. |
+| `CLAUDE.md` says React 18 | `package.json` declares React `^19.1.1`; `package-lock.json` resolves React `19.1.1`. |
+| `CLAUDE.md` says intelligence metrics come from a live Pega API | `IntelligencePage` imports `src/data/intelligence.json` directly. |
+| A protected route looks like ordinary page composition | `ProtectedLayout` calls `requireSession`, which redirects requests without `dashboard_session`. |
+| A page is inside the protected layout | `IntelligencePage` still checks the `intelligence:read` permission through `useCheckPermission`. |
 
-The Cursor paths follow its official [Project Rules](https://docs.cursor.com/context/rules) and [Agent Skills](https://cursor.com/docs/skills) conventions.
+The neutral task asks an agent to improve onboarding documentation without naming Repository Knowledge. It must reject the stale prose, trace the session and permission boundaries, explain the form and BFF flow, preserve application files, and cite current evidence.
 
-`claude` is accepted as an alias for `claude-code`, and `antigravity` is accepted as an alias for `antigravity-ide`. The manifest records canonical names. Install every supported adapter with one preference flag:
+| Condition | Preparation | Published result |
+| --- | --- | --- |
+| Control | The fixture alone | Not run or published. |
+| Treatment | The same fixture plus the selected Repository Knowledge adapter | Not run or published. |
 
-```bash
-repo-knowledge install --target . --all-agents
-```
+The case definition, prompt, objective checks, blind rubric, and expected trace are committed under [`evals/benchmarks/frontend-onboarding/`](evals/benchmarks/frontend-onboarding/). This is a demonstration of a falsifiable test, not evidence that the treatment wins.
 
-For a subset, repeat `--agent`:
+## Measured results
 
-```bash
-repo-knowledge install --target . \
-  --agent codex \
-  --agent claude-code \
-  --agent antigravity-ide \
-  --agent cursor
-```
+No outcome results are currently available. Consequently, no causal improvement is claimed.
 
-The binary does not run as a daemon and does not inspect prompt transcripts. Each native lifecycle hook runs `repo-knowledge hook-context` to inject the installed contract, repository routing configuration, and `docs/index.md` before ordinary repository discovery. The rule remains the portable fallback, and the agent must emit an observable `Repository knowledge preflight: loaded` progress receipt naming the selected routes.
+| Primary measure | Control | Treatment | Observed difference |
+| --- | ---: | ---: | ---: |
+| First-attempt success (`pass@1`) | Not measured | Not measured | No claim |
+| Unsupported architectural claims | Not measured | Not measured | No claim |
+| Elapsed time | Not measured | Not measured | No claim |
+| Token usage | Not measured | Not measured | No claim |
 
-This is a strong activation guardrail, not an absolute enforcement boundary. The binary must resolve on the agent host's `PATH`, project hooks must be enabled and trusted where the host requires review, and the host may surface hook failures without blocking a session. `repo-knowledge doctor --target .` validates the configured entries; the agent's progress receipt makes a skipped preflight visible. Existing hook configuration is preserved because the installer owns only its exact nested command entry, not the surrounding JSON file.
+When trials exist, every successful and failed run must be stored with its source and case revisions, agent/model configuration, duration, token usage when available, deterministic result, blind semantic review, and preserved output artifact. Results use immutable paths under [`evals/results/`](evals/results/); the repository will link the corresponding raw records from this table instead of replacing them with a marketing summary.
 
-## Generate documentation people can learn from
+Conformance results answer a different question—whether an agent follows the Repository Knowledge contract—and are not presented as causal product evidence.
 
-Ask a supported agent for human-readable repository documentation, for example:
+## Three-command quickstart
 
-```text
-Use repository-knowledge to inspect this entire repository and generate comprehensive, human-readable documentation. Classify every repository shape present, then explain its purpose, architecture, major flows, domains or features, interfaces, data, integrations, security, development, and operations wherever applicable. Create focused guides for each material capability, populate docs/index.md and verified capability routes, and do not stop after scan, rebuild, or a shallow overview.
-```
+First, download the pinned [v0.9.0 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.9.0), verify its checksum and attestation, and put the executable on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) provides platform and verification details.
 
-The agent first classifies the repository using every applicable profile: backend, frontend, mobile or desktop, library or SDK, CLI, infrastructure, data or ML, monorepo, embedded, documentation/configuration, or an evidence-derived unusual shape. It then inspects implementation, tests, manifests, lockfiles, configuration, schemas, contracts, deployment evidence, and existing documentation before writing a detailed guide set proportional to the repository.
-
-Existing prose—including README files, `CLAUDE.md`, `AGENTS.md`, comments, and older generated guides—is treated as a discovery or intent source, not automatic proof of current technical state. Current claims are verified against the authoritative artifact for that claim type. For example, framework and dependency declarations come from package/build manifests, exact resolutions come from lockfiles, implemented behavior comes from tests and source, and data shape comes from schemas and migrations. If `CLAUDE.md` says React 18 while the current manifest and lockfile establish React 19, the generated docs use React 19 and report `CLAUDE.md` as stale.
-
-The documentation must also pass an implementation-readiness gate. Unsupported phrases such as “likely,” “typically,” or “expected” cannot substitute for source inspection. Domain guides must connect rules, invariants, state transitions, permissions, side effects, failures, and tests. Frontend guides must explain the actual route guards, state ownership, queries and mutations, forms and validation, design-system composition, BFF/API behavior, and test patterns—not merely name libraries. Recurring patterns include concise examples derived from current source with paths and symbols so a newcomer can make a first change safely.
-
-Generation is self-remediating. Before drafting, the agent builds a private coverage ledger and a trace dossier for every material capability. Each executable capability receives a named end-to-end flow with concrete paths and symbols, state effects, failures, tests, and extension patterns. If the final quality gate finds shallow coverage, the agent returns to the implementation and revises the guides in the same task. A request to generate or rebuild must not stop at an insufficiency assessment or ask permission to begin work that was already requested; a standalone review or assessment remains read-only.
-
-Once that evidence-backed depth is established, the agent also improves the reader experience: the overview provides a repository-specific mental model and practical newcomer path, and a small number of Mermaid component, sequence, state, or data-flow diagrams may be added when they explain relationships more clearly than prose. Diagrams are optional and never replace behavioral details, errors, tests, or evidence.
-
-Every repository receives an overview, architecture guide, and curated index unless accurate equivalents already exist. The agent then adds focused pages for each material domain, feature, API, data model, integration, operational surface, or other profile-specific concept. A backend result might look like:
-
-```text
-docs/
-├── index.md
-├── repository-overview.md
-├── architecture.md
-├── domains/
-│   ├── transaction.md
-│   └── approval.md
-├── api/
-│   └── transaction-api.md
-├── data/
-│   └── transaction-model.md
-├── integrations/
-│   └── iiam.md
-├── operations/
-│   └── running-and-deployment.md
-└── decisions/
-    └── adr-003-approval-workflow.md
-```
-
-The tree adapts to repository evidence; it is not a mandatory template. ADRs are created only for decisions that are actually evidenced. Each guide explains behavior, flows, contracts, edge cases, change consequences, tests, and evidence—not just files or endpoints. The agent updates `docs/index.md` and `.repo-knowledge/repository.json` so readers can navigate from concepts to guides and implementation.
-
-`repo-knowledge scan` and `repo-knowledge rebuild` do not perform semantic analysis. They produce discovery data and an optional structural appendix for the agent. A file list, fingerprint catalog, empty index, or applied inventory is not considered completed repository documentation.
-
-## Evaluate agent behavior
-
-The repository separates two kinds of evidence. Conformance evaluations use explicit Repository Knowledge prompts to test whether agents follow the product contract. Outcome benchmarks use a neutral prompt under paired `control` and `treatment` conditions to measure whether Repository Knowledge improves the same agent's deterministic result, blind semantic score, duration, or token usage.
-
-The existing conformance workflow remains unchanged:
+From the repository you want Codex to understand:
 
 ```bash
-go run ./cmd/repo-knowledge-eval prepare \
-  --case frontend-nextjs \
-  --output /tmp/repository-knowledge-eval-frontend \
-  --agent codex
-
-go run ./cmd/repo-knowledge-eval grade \
-  --case frontend-nextjs \
-  --target /tmp/repository-knowledge-eval-frontend
-```
-
-For causal comparison, select `--family benchmark` and prepare the same neutral case twice with an explicit `--condition control` and `--condition treatment`. Control remains a clean fixture with no toolkit or experiment paths; treatment installs only the selected adapter. Adjacent baseline sidecars record the source/case revision, condition, agent host version, model version, reasoning configuration, Repository Knowledge revision, and trial number without contaminating the control target. The objective grader cannot establish that prose is correct or useful, so deterministic success remains `pending_semantic_review` until a blind reviewer explicitly records a semantic score and identity. Immutable result recording preserves failed and successful trials with their patches or output artifacts. See [agent evaluations](evals/README.md) for the paired workflow, benchmark format, and result schema.
-
-## Installation
-
-There are two independent parts:
-
-1. **Proactive agent support** — used when a repository change starts from a Codex, Claude Code, Antigravity IDE, or Cursor prompt.
-2. **CI validation** — an optional GitHub Actions or GitLab fallback for changes written without an agent.
-
-Start with proactive agent support. Add CI later if you need it.
-
-### Step 1: Get the binary
-
-Download the released binary for your operating system plus `LICENSE`, verify both with `SHA256SUMS`, and retain the license with any redistributed binary. Put the executable somewhere on `PATH` as `repo-knowledge`.
-
-If a repository already contains the complete installed skill but the command is missing—for example, after cloning the repository onto a new machine—the skill can recover it. When a CLI operation is needed, the agent reads the exact release ref and source from `.repo-knowledge/toolkit.json`, previews the platform artifact and user-local destination, and asks permission before downloading or writing anything. After approval, the bundled bootstrap helper verifies `SHA256SUMS`, verifies the GitHub artifact attestation when a compatible `gh` command is available, and installs the executable into a user-owned directory already on `PATH`. It never selects `latest`, uses `sudo`, or silently edits a Unix shell profile. On Windows, adding the default user-local directory to the user PATH is included explicitly in the permission request.
-
-This is a recovery path, not a way to bootstrap an untrusted loose `SKILL.md`. It requires a complete toolkit installation with a pinned manifest, or the toolkit source tree with its `VERSION` file. See [Missing-binary recovery](docs/installation.md#missing-binary-recovery).
-
-If you are testing from this source repository instead, build it locally:
-
-```bash
-make build
-./repo-knowledge --version
-```
-
-When using a local build, replace `repo-knowledge` in the examples below with the full path to `./repo-knowledge`.
-
-### Step 2: Install proactive agent support — no CI
-
-From the repository you want the agent to understand, choose one or more adapters:
-
-```bash
-cd /path/to/your-repository
-repo-knowledge install --target .
-```
-
-Codex is the default, so the short command above is equivalent to `--agent codex`. Select any other adapter explicitly:
-
-```bash
-repo-knowledge install --target . --agent claude-code
-repo-knowledge install --target . --agent antigravity-ide
-repo-knowledge install --target . --agent cursor
-```
-
-Repeat `--agent` to support multiple agents in the same repository. The installer adds the shared runtime-neutral bundle plus only the selected prompt adapters:
-
-To select all supported agents instead, use:
-
-```bash
-repo-knowledge install --target . --all-agents
-```
-
-`--all-agents` cannot be combined with `--agent`.
-
-```text
-.repo-knowledge/policy/                        shared contract and defaults
-.repo-knowledge/schemas/                       configuration schemas
-.repo-knowledge/repository.json                repository-owned configuration
-.repo-knowledge/local-invariants.json          repository-owned rules
-.repo-knowledge/local-impact-rules.json        repository-owned impact rules
-docs/index.md                                  created only when absent
-
-AGENTS.md                                      Codex only: managed routing block
-.codex/hooks.json                              Codex shared hook container; toolkit manages one SessionStart entry
-.agents/skills/repository-knowledge/           Codex or Antigravity IDE skill
-.claude/rules/repository-knowledge.md          Claude Code routing rule
-.claude/skills/repository-knowledge/           Claude Code skill
-.claude/settings.json                          Claude Code shared settings; toolkit manages one SessionStart entry
-.agents/rules/repository-knowledge.md          Antigravity IDE routing rule
-.agents/hooks.json                             Antigravity shared hook container; toolkit manages one named entry
-.cursor/rules/repository-knowledge.mdc         Cursor always-applied routing rule
-.cursor/skills/repository-knowledge/           Cursor skill
-.cursor/hooks.json                             Cursor shared hook container; toolkit manages one sessionStart entry
-```
-
-It does **not**:
-
-- install GitHub Actions or GitLab CI;
-- commit the `repo-knowledge` binary into the repository;
-- replace an existing `docs/index.md`;
-- overwrite repository-owned configuration or documentation;
-- run a scan or rebuild automatically.
-
-The repository installer does not copy its running executable into the consuming repository. The installed skill does include small bootstrap helpers that may later install the same pinned release into the user's PATH, but only after a separate, explicit permission prompt.
-
-The skill cannot be installed usefully as only `SKILL.md`: it depends on the shared contract, repository configuration, and documentation index. The command above installs that complete prompt-side bundle without enabling CI.
-
-### Step 3: Verify the installation
-
-```bash
+repo-knowledge install --target . --agent codex --source https://github.com/rustedzone/repository-knowledge --ref v0.9.0
 repo-knowledge doctor --target .
+codex
 ```
 
-After this passes, review/trust the project hook if the host asks, then open a new agent session in the repository. For repository-related prompts, confirm the first progress update reports `Repository knowledge preflight: loaded` and names the selected routes.
+The third command starts a fresh Codex session so its project hook can load the repository preflight. Review or trust the hook if Codex asks. The first repository-related progress update should say `Repository knowledge preflight: loaded` and name the selected documentation routes.
 
-### Step 4: Optionally create a structural appendix
+Use `--agent claude-code`, `--agent antigravity-ide`, or `--agent cursor` for another host. Repeat `--agent` for a subset, or use `--all-agents` to install every supported adapter; then start a new session in the selected host.
 
-This step is optional and separate from generating human-readable documentation:
+## Honest boundary
 
-```bash
-repo-knowledge scan --target .
-repo-knowledge rebuild --target .
-```
+Repository Knowledge makes correct repository behavior cheaper and observable; it does not guarantee agent compliance or understanding.
 
-Review `.repo-knowledge/rebuild-proposal.md`. To accept the generated structural appendix:
+- Documentation is routing and intent evidence, not unquestionable truth. Current runtime behavior, tests, schemas, migrations, effective configuration, and implementation take precedence for their respective claims.
+- Native hooks are activation guardrails. A host may require trust, may disable hooks, or may surface a failed hook without blocking the session. The required preflight receipt makes a skipped workflow visible.
+- `scan` and `rebuild` produce structural discovery data, not semantic documentation. An agent still has to inspect implementation and tests to explain behavior accurately.
+- CI validates whether a material diff has documentation or an explicit impact decision. It does not determine semantic correctness, rewrite documentation, or commit changes.
+- The current outcome benchmark has not been executed and does not support a performance claim.
 
-```bash
-repo-knowledge rebuild --target . --apply
-```
+## How it works
 
-The inventory is discovery input only. Ask the installed agent to inspect the evidence, write semantic guides, and add verified knowledge routes to `.repo-knowledge/repository.json` and `docs/index.md`.
-
-### Step 5: Optionally add CI
-
-The proactive agent installation is complete without CI. GitHub repositories can call the pinned reusable workflow:
-
-```yaml
-jobs:
-  documentation-impact:
-    permissions:
-      contents: read
-      attestations: read
-    uses: rustedzone/repository-knowledge/.github/workflows/documentation-check.yml@v0.9.0
-    with:
-      toolkit-version: v0.9.0
-      enforcement: advisory
-```
-
-The caller normally triggers this job for `pull_request` and pushes to `main`. GitLab repositories use the existing pinned include. See [GitHub Actions CI](docs/installation.md#github-actions-ci) and [GitLab CI](docs/installation.md#gitlab-ci) for complete examples and security boundaries.
-
-### Record an explicit production source and version
-
-The short command records the running binary version automatically. For centrally managed installations, you can also record the canonical source and pinned ref:
-
-```bash
-repo-knowledge install \
-  --target /path/to/your-repository \
-  --agent codex \
-  --source https://github.com/rustedzone/repository-knowledge \
-  --ref v0.9.0
-```
-
-## V1 contents
+Repository Knowledge applies one versioned contract through two independent funnels:
 
 ```text
-repository-knowledge/
-├── assets.go                embedded managed assets
-├── cmd/repo-knowledge/      binary entrypoint
-├── internal/toolkit/        deterministic operations
-├── policy/                  shared runtime-neutral contract and defaults
-├── schemas/                 consumer configuration interfaces
-├── skills/                  shared agent skill
-├── templates/               bootstrap and consumer-owned defaults
-├── adapters/                GitHub and GitLab CI adapters
-├── evals/                   conformance cases, neutral benchmarks, and immutable results
-├── examples/                adoption examples
-└── docs/                    architecture and operating guidance
+prompt -> native hook -> routed knowledge -> verified change -> documentation reconciliation
+diff   -> CI adapter  -> documentation-impact validation -> report/pass/fail
 ```
 
-The contract is the product. The Codex, Claude Code, Antigravity IDE, Cursor, GitHub Actions, and GitLab adapters consume it. The Go executable embeds every toolkit-managed asset, so a released binary can install or update a repository without a toolkit checkout, Go toolchain, Python runtime, or package download. The build has no third-party Go dependencies and release artifacts use `CGO_ENABLED=0`.
+The Go executable installs the shared policy, schemas, repository defaults, and only the selected agent adapters. It does not run as a daemon or inspect prompt transcripts. Toolkit updates replace toolkit-managed assets while preserving consumer-owned documentation, local rules, repository metadata, ADRs, scan state, and impact acknowledgments.
 
-See [Installation](docs/installation.md), [Testing](docs/testing.md), and [Architecture](docs/architecture.md).
+For documentation generation, ask the installed agent to inspect the complete repository and produce evidence-backed, implementation-ready guides. A scan or generated file inventory is only a discovery input. The [documentation-generation workflow](skills/repository-knowledge/references/documentation-generation.md) requires concrete behavioral traces, rules and failure paths, source-derived examples, a curated `docs/index.md`, and verified capability routes.
 
-## Commands
+## Detailed documentation
+
+- [Installation and agent selection](docs/installation.md) — binary verification, individual and all-agent installation, native hooks, updates, missing-binary recovery, and GitHub/GitLab CI.
+- [Architecture](docs/architecture.md) — policy boundaries, ownership, lifecycle behavior, release trust, and CI enforcement.
+- [Configuration and contract](docs/configuration.md) — repository metadata, local invariants, impact rules, and evidence precedence.
+- [Testing](docs/testing.md) — Go compatibility, workflow-security checks, conformance evaluations, and outcome benchmarks.
+- [Evaluation protocol](evals/README.md) — control/treatment preparation, blind semantic grading, immutable raw results, and causal limitations.
+- [Extension guide](docs/extension-guide.md) — adding deterministic detectors, adapters, or policy extensions without crossing ownership boundaries.
+- [Security policy](SECURITY.md) — supported versions and private vulnerability reporting.
+
+## Command reference
 
 | Command | Outcome |
 | --- | --- |
-| `install` | Install embedded policy, schemas, selected prompt adapters, and missing consumer defaults; use `--all-agents` for every supported adapter. |
-| `update` | Refresh only toolkit-owned files; omit adapter flags to retain the selection or use `--all-agents` to switch to every adapter. |
-| `doctor` | Validate configuration, binary compatibility, and managed-file integrity. |
-| `scan` | Write machine-readable structural scan state with manifests, module fingerprints, existing docs, and capability leads. |
-| `audit` | Report missing routes, broken index links, stale scan state, and optional diff gaps. |
-| `rebuild` | Write an optional structural-inventory proposal; `--apply` updates that generated appendix only, not semantic documentation. |
-| `impact` | Classify a diff and calculate its stable material-path fingerprint. |
-| `acknowledge` | Record a `required` or `not_required` decision bound to that fingerprint. |
-| `validate-doc-impact` | Apply advisory, acknowledgment, or explicitly mapped enforced checks. |
-| `hook-context` | Internal host-hook command that emits the bounded repository preflight in the selected agent's native protocol. |
+| `install` | Install the shared bundle and selected prompt adapters; `--all-agents` selects every supported adapter. |
+| `update` | Refresh toolkit-owned files while preserving consumer-owned knowledge. |
+| `doctor` | Validate configuration, binary compatibility, managed files, and native hooks. |
+| `scan` | Generate structural discovery state and capability leads. |
+| `audit` | Report missing routes, broken index links, stale scans, and optional diff gaps. |
+| `rebuild` | Propose or apply the optional generated structural inventory. |
+| `impact` | Classify a diff and calculate its material-path fingerprint. |
+| `acknowledge` | Record a documentation-impact decision bound to that fingerprint. |
+| `validate-doc-impact` | Apply advisory, acknowledgment, or explicitly mapped enforcement. |
+| `hook-context` | Emit the bounded repository preflight in the selected agent's native protocol. |
 
-## Proactive agent behavior
-
-For each selected agent, the binary installs a native project rule, the repository-knowledge skill, and a lifecycle hook. The hook injects the routing preflight; the rule supplies the manual fallback and instructs the agent to start from `docs/index.md`, select the smallest relevant knowledge set for ordinary work, verify important claims against repository evidence, and reconcile documentation impact after implementation. The first progress update must confirm the preflight and selected routes. Full documentation-generation requests instead require repository-wide classification, evidence-proportional coverage, detailed profile-specific guides, a populated index, and verified capability routes. The binary supports this lifecycle without running as a daemon or parsing prompt transcripts.
-
-## Continuous integration and releases
-
-GitHub pull requests and pushes to `main` run ordinary tests, vet, formatting checks, and builds for both CLIs on Go 1.22.0 and Go 1.25.14. Race-enabled tests run once on Go 1.25.14. Every external workflow action is pinned to a full commit SHA, and a repository test rejects mutable tags, branches, short SHAs, and mutable Docker tags.
-
-Version tags use a read-only job to verify source and build the cross-platform release set. A SHA-pinned artifact transfer carries that set to a separate publishing job, which alone receives contents, identity-token, and attestation write permissions. The publishing job generates GitHub artifact attestations and publishes the binaries, GitHub adapter, `LICENSE`, and `SHA256SUMS` without rebuilding them.
-
-The GitHub Actions and GitLab CI integrations are optional and are not installed by `repo-knowledge install`.
-
-The GitHub reusable workflow checks out the caller with full history and without persisted credentials, downloads the pinned Linux binary and GitHub adapter from the matching release, verifies their checksums and attestations, runs the validator over the explicit pull-request or push range, and uploads `repository-knowledge-impact.json` even when blocking validation fails. It pins its GitHub-owned action dependencies to full commit SHAs, needs only read access to contents and attestations, and does not use `pull_request_target`, secrets, or repository write permissions.
-
-The GitLab reusable include downloads the pinned Linux binary from the toolkit project's Generic Package Registry, verifies `SHA256SUMS`, and runs the same impact validator over the Git diff. Both CI adapters upload a JSON report and never write or commit documentation. Start in `advisory`, move to `acknowledgment` after teams reliably record decisions, and use `enforced` only for deterministic mappings configured by the consuming repository.
-
-## Intentionally deferred from V1
-
-- Semantic LLM analysis inside CI and suggested patch generation.
-- Additional agent adapters beyond Codex, Claude Code, Antigravity IDE, and Cursor.
-- Framework-specific API, route, schema, permission, and configuration extractors.
-- Content-aware incremental deep scans.
-- A central knowledge registry, embeddings, or vector retrieval.
-- Automated rewriting of semantic documentation during rebuild.
-
-Versions follow Semantic Versioning; consumers pin tags such as `v0.9.0`. See [SECURITY.md](SECURITY.md) for private vulnerability reporting instructions.
+See the [installation guide](docs/installation.md) for complete usage and the [architecture guide](docs/architecture.md) for ownership and safety boundaries.
 
 ## License
 

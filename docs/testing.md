@@ -26,7 +26,9 @@ GOTOOLCHAIN=go1.22.0 go build -trimpath -o /tmp/repo-knowledge-eval ./cmd/repo-k
 go test -run TestImmutableUsesValidationRejectsMutableReferences ./...
 ```
 
-## Prompt-driven agent evaluation
+## Agent evaluation
+
+### Conformance evaluations
 
 List the isolated evaluation cases:
 
@@ -54,6 +56,40 @@ go run ./cmd/repo-knowledge-eval grade \
 The grade covers only objective artifact and evidence checks. Complete the case's `rubric.md` and record the trial with [`evals/report-template.md`](../evals/report-template.md). Acceptance requires all critical rubric items to score 2 and at least 85% of available semantic points. A deterministic pass without that review is pending, not a successful evaluation.
 
 Use fresh output directories for repeated trials. Track first-attempt `pass@1`; target `pass@3 >= 0.90` across representative cases and agents. For a change intended to fix a known regression, require all three repeated relevant trials to pass (`pass^3 = 1.00`) before release.
+
+### Outcome benchmarks
+
+Outcome benchmarks use a neutral prompt and explicit conditions. `control` copies only the fixture and leaves no experiment marker inside the target; `treatment` installs only the requested adapter. Both conditions record their baseline in an adjacent sidecar. Model and reasoning metadata are required, and both conditions must use the same values and trial number:
+
+```bash
+go run ./cmd/repo-knowledge-eval prepare \
+  --family benchmark \
+  --case frontend-onboarding \
+  --condition control \
+  --output /tmp/frontend-control \
+  --agent codex \
+  --agent-version codex-desktop-2026.09 \
+  --model-version gpt-5.6-sol \
+  --reasoning high \
+  --repository-knowledge-revision v0.9.0 \
+  --trial 1
+
+go run ./cmd/repo-knowledge-eval prepare \
+  --family benchmark \
+  --case frontend-onboarding \
+  --condition treatment \
+  --output /tmp/frontend-treatment \
+  --agent codex \
+  --agent-version codex-desktop-2026.09 \
+  --model-version gpt-5.6-sol \
+  --reasoning high \
+  --repository-knowledge-revision v0.9.0 \
+  --trial 1
+```
+
+Run the printed prompt independently in each target, preserve each patch or output archive, and grade with `--family benchmark`. Do not expose the rubric or expected trace before the reviewer scores the output. Recording with `--results evals/results --run-date <YYYY-MM-DD> --duration <duration> --artifact <file>` uses exclusive-create semantics and accepts failed as well as successful trials. See [`evals/README.md`](../evals/README.md) for the complete paired workflow and result schema.
+
+Harness tests verify that invalid or missing conditions write nothing, control has no toolkit assets, treatment installs only the requested adapter, fixture application files are identical, metadata survives grading, protected-source checks run under both conditions, failed trials can be recorded, and existing result paths cannot be overwritten. A deterministic pass remains pending until semantic status, score, and reviewer are supplied explicitly.
 
 ## Disposable target smoke test
 

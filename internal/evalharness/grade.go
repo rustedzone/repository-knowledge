@@ -13,6 +13,16 @@ import (
 
 func Grade(options GradeOptions) (GradeResult, error) {
 	var result GradeResult
+	if options.DurationMillis < 0 {
+		return result, fmt.Errorf("duration cannot be negative")
+	}
+	if options.TokenUsage != nil && *options.TokenUsage < 0 {
+		return result, fmt.Errorf("token usage cannot be negative")
+	}
+	semanticStatus, err := validateSemanticResult(options.SemanticStatus, options.SemanticScore, options.SemanticReviewer)
+	if err != nil {
+		return result, err
+	}
 	spec, caseRoot, err := LoadSpec(options.CasesRoot, options.CaseID)
 	if err != nil {
 		return result, err
@@ -21,16 +31,25 @@ func Grade(options GradeOptions) (GradeResult, error) {
 	if err != nil {
 		return result, fmt.Errorf("resolve evaluation target: %w", err)
 	}
-	baseline, err := readBaseline(target)
+	baseline, err := readBaseline(target, spec.Family)
 	if err != nil {
 		return result, err
 	}
 	if baseline.CaseID != spec.ID || baseline.CaseRevision != spec.Revision {
 		return result, fmt.Errorf("baseline is for %s revision %s, not %s revision %s", baseline.CaseID, baseline.CaseRevision, spec.ID, spec.Revision)
 	}
+	if baseline.Family != spec.Family {
+		return result, fmt.Errorf("baseline family is %s, not %s", baseline.Family, spec.Family)
+	}
 	result = GradeResult{
-		CaseID: spec.ID, Revision: spec.Revision, Target: target,
-		SemanticStatus: "pending_human_or_model_review", OverallStatus: "pending_semantic_review",
+		SchemaVersion: "1.0", Family: baseline.Family, Condition: baseline.Condition,
+		CaseID: spec.ID, Revision: spec.Revision, SourceCommit: baseline.SourceCommit, Target: target,
+		Agent: baseline.Agent, AgentVersion: baseline.AgentVersion, ModelVersion: baseline.ModelVersion,
+		ReasoningConfiguration:      baseline.ReasoningConfiguration,
+		RepositoryKnowledgeRevision: baseline.RepositoryKnowledgeRevision,
+		TrialNumber:                 baseline.TrialNumber, DurationMillis: options.DurationMillis, TokenUsage: options.TokenUsage,
+		SemanticStatus: semanticStatus, SemanticScore: options.SemanticScore,
+		SemanticReviewer: strings.TrimSpace(options.SemanticReviewer), OverallStatus: "pending_semantic_review",
 		Rubric: filepath.Join(caseRoot, spec.Rubric),
 	}
 	for _, check := range spec.Checks {
@@ -48,12 +67,20 @@ func Grade(options GradeOptions) (GradeResult, error) {
 		result.DeterministicStatus = "fail"
 		result.OverallStatus = "fail"
 	}
+	if result.DeterministicStatus == "pass" {
+		switch result.SemanticStatus {
+		case "pass":
+			result.OverallStatus = "pass"
+		case "fail":
+			result.OverallStatus = "fail"
+		}
+	}
 	return result, nil
 }
 
-func readBaseline(target string) (Baseline, error) {
+func readBaseline(target, family string) (Baseline, error) {
 	var baseline Baseline
-	path := filepath.Join(target, ".repo-knowledge", "eval-baseline.json")
+	path := evaluationBaselinePath(target, family)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return baseline, fmt.Errorf("read evaluation baseline; prepare the case first: %w", err)
@@ -61,7 +88,30 @@ func readBaseline(target string) (Baseline, error) {
 	if err := json.Unmarshal(data, &baseline); err != nil {
 		return baseline, fmt.Errorf("parse evaluation baseline: %w", err)
 	}
+	if baseline.SchemaVersion != "2.0" {
+		return baseline, fmt.Errorf("evaluation baseline schema_version must be 2.0; prepare the case again")
+	}
 	return baseline, nil
+}
+
+func validateSemanticResult(status string, score *SemanticScore, reviewer string) (string, error) {
+	status = strings.TrimSpace(status)
+	if status == "" || status == "pending_human_or_model_review" {
+		if score != nil || strings.TrimSpace(reviewer) != "" {
+			return "", fmt.Errorf("semantic score and reviewer require an explicit semantic status of pass or fail")
+		}
+		return "pending_human_or_model_review", nil
+	}
+	if status != "pass" && status != "fail" {
+		return "", fmt.Errorf("semantic status must be pass, fail, or pending_human_or_model_review")
+	}
+	if score == nil || score.Available < 1 || score.Earned < 0 || score.Earned > score.Available {
+		return "", fmt.Errorf("semantic pass or fail requires a valid earned and available score")
+	}
+	if strings.TrimSpace(reviewer) == "" {
+		return "", fmt.Errorf("semantic pass or fail requires a reviewer")
+	}
+	return status, nil
 }
 
 func runCheck(target string, spec Spec, baseline Baseline, check CheckSpec) CheckResult {

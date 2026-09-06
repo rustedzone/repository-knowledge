@@ -90,9 +90,9 @@ The tree adapts to repository evidence; it is not a mandatory template. ADRs are
 
 ## Evaluate agent behavior
 
-The repository includes isolated prompt-driven evaluations for the failure modes reported in frontend and layered Go backend repositories. They test stale prose against stronger current evidence, end-to-end behavior tracing, state and deletion semantics, source-derived examples, verified routes, and preservation of repository source.
+The repository separates two kinds of evidence. Conformance evaluations use explicit Repository Knowledge prompts to test whether agents follow the product contract. Outcome benchmarks use a neutral prompt under paired `control` and `treatment` conditions to measure whether Repository Knowledge improves the same agent's deterministic result, blind semantic score, duration, or token usage.
 
-Prepare a disposable case, run the selected agent in the printed target using the printed prompt, then grade the result:
+The existing conformance workflow remains unchanged:
 
 ```bash
 go run ./cmd/repo-knowledge-eval prepare \
@@ -105,7 +105,7 @@ go run ./cmd/repo-knowledge-eval grade \
   --target /tmp/repository-knowledge-eval-frontend
 ```
 
-The objective grader cannot establish that prose is correct or useful. A deterministic pass remains `pending_semantic_review` until the case rubric confirms behavioral accuracy, implementation readiness, and absence of unsupported claims. See [agent evaluations](evals/README.md) for the cases, rubric threshold, repeat-trial metrics, and report format.
+For causal comparison, select `--family benchmark` and prepare the same neutral case twice with an explicit `--condition control` and `--condition treatment`. Control remains a clean fixture with no toolkit or experiment paths; treatment installs only the selected adapter. Adjacent baseline sidecars record the source/case revision, condition, agent host version, model version, reasoning configuration, Repository Knowledge revision, and trial number without contaminating the control target. The objective grader cannot establish that prose is correct or useful, so deterministic success remains `pending_semantic_review` until a blind reviewer explicitly records a semantic score and identity. Immutable result recording preserves failed and successful trials with their patches or output artifacts. See [agent evaluations](evals/README.md) for the paired workflow, benchmark format, and result schema.
 
 ## Installation
 
@@ -260,7 +260,7 @@ repository-knowledge/
 ├── skills/                  shared agent skill
 ├── templates/               bootstrap and consumer-owned defaults
 ├── adapters/                GitHub and GitLab CI adapters
-├── evals/                   isolated prompt-driven agent evaluations
+├── evals/                   conformance cases, neutral benchmarks, and immutable results
 ├── examples/                adoption examples
 └── docs/                    architecture and operating guidance
 ```

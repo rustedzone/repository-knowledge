@@ -290,7 +290,9 @@ For each selected agent, the binary installs a native project rule, the reposito
 
 ## Continuous integration and releases
 
-GitHub pull requests and pushes to `main` run tests, race-enabled tests, vet, formatting checks, and builds for both CLIs using the patched Go release selected by the workflow. Version tags build the cross-platform release set, package the GitHub adapter, generate GitHub artifact attestations, and publish the artifacts, `LICENSE`, and `SHA256SUMS` to a GitHub release.
+GitHub pull requests and pushes to `main` run ordinary tests, vet, formatting checks, and builds for both CLIs on Go 1.22.0 and Go 1.25.14. Race-enabled tests run once on Go 1.25.14. Every external workflow action is pinned to a full commit SHA, and a repository test rejects mutable tags, branches, short SHAs, and mutable Docker tags.
+
+Version tags use a read-only job to verify source and build the cross-platform release set. A SHA-pinned artifact transfer carries that set to a separate publishing job, which alone receives contents, identity-token, and attestation write permissions. The publishing job generates GitHub artifact attestations and publishes the binaries, GitHub adapter, `LICENSE`, and `SHA256SUMS` without rebuilding them.
 
 The GitHub Actions and GitLab CI integrations are optional and are not installed by `repo-knowledge install`.
 

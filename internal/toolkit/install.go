@@ -92,6 +92,10 @@ func Install(options InstallOptions) (InstallResult, error) {
 		return result, err
 	}
 	options.AntigravityPreflight = options.PreflightModes[agentAntigravityIDE]
+	options.PreflightContext, err = resolvePreflightContext(options, oldManifest)
+	if err != nil {
+		return result, err
+	}
 	hookRegistrations, hookMutations, err := prepareAgentHooks(target, oldManifest.AgentAdapters, options.AgentAdapters, options.Update, options.PreflightModes)
 	if err != nil {
 		return result, err
@@ -144,6 +148,7 @@ func Install(options InstallOptions) (InstallResult, error) {
 		AgentAdapters:        append([]string(nil), options.AgentAdapters...),
 		PreflightModes:       options.PreflightModes,
 		AntigravityPreflight: options.AntigravityPreflight,
+		PreflightContext:     options.PreflightContext,
 		ManagedFiles:         managedFiles,
 		Ownership: map[string]string{
 			"managed_files":                  "replaced by repo-knowledge update",
@@ -170,6 +175,20 @@ func Install(options InstallOptions) (InstallResult, error) {
 		ModifiedObsoleteFilesPreserved: preserved,
 		AgentHookRegistrations:         hookRegistrations,
 	}, nil
+}
+
+func resolvePreflightContext(options InstallOptions, old ToolkitManifest) (string, error) {
+	profile := strings.TrimSpace(options.PreflightContext)
+	if profile == "" && options.Update {
+		profile = strings.TrimSpace(old.PreflightContext)
+	}
+	if profile == "" {
+		profile = PreflightContextFull
+	}
+	if profile != PreflightContextFull && profile != PreflightContextCompact {
+		return "", fmt.Errorf("preflight context must be %q or %q", PreflightContextFull, PreflightContextCompact)
+	}
+	return profile, nil
 }
 
 func resolvePreflightModes(options InstallOptions, old ToolkitManifest) (map[string]string, error) {

@@ -1,6 +1,7 @@
 package toolkit
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,8 +23,9 @@ func TestHookContextProfilesExposeContentFreeMetrics(t *testing.T) {
 	if full.Metrics.Profile != PreflightContextFull || full.Metrics.Bytes != len(full.Output) || full.Metrics.Characters != utf8.RuneCountInString(full.Output) || full.Metrics.GenerationMillis < 0 {
 		t.Fatalf("full context metrics = %+v for %d bytes", full.Metrics, len(full.Output))
 	}
-	if full.Metrics.Content != "" {
-		t.Fatalf("metrics leaked context content: %q", full.Metrics.Content)
+	encodedMetrics, err := json.Marshal(full.Metrics)
+	if err != nil || strings.Contains(string(encodedMetrics), "Installed toolkit policy contract") {
+		t.Fatalf("metrics leaked context content: %s, %v", encodedMetrics, err)
 	}
 
 	if _, err := Install(InstallOptions{Target: root, Update: true, PreflightContext: PreflightContextCompact}); err != nil {

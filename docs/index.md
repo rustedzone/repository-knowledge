@@ -65,6 +65,7 @@ Evidence anchors:
 Read when:
 - changing generation instructions or assessing whether an agent produces source-grounded, implementation-ready documentation;
 - reproducing frontend or layered-backend documentation regressions across Codex, Claude Code, Antigravity IDE, or Cursor.
+- comparing neutral control and treatment outcomes without conflating conformance with causal evidence.
 
 Knowledge:
 - [Agent evaluation workflow](../evals/README.md)
@@ -72,6 +73,8 @@ Knowledge:
 
 Evidence anchors:
 - `evals/cases/`
+- `evals/benchmarks/`
+- `evals/results/`
 - `internal/evalharness/`
 - `cmd/repo-knowledge-eval/`
 

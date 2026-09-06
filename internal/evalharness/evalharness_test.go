@@ -1,6 +1,7 @@
 package evalharness
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -19,6 +20,253 @@ func TestEvaluationSpecsLoad(t *testing.T) {
 	}
 	if specs[0].ID != "backend-clean-architecture" || specs[1].ID != "frontend-nextjs" {
 		t.Fatalf("unexpected cases: %q, %q", specs[0].ID, specs[1].ID)
+	}
+}
+
+func TestOutcomeBenchmarkSpecIsNeutralAndComplete(t *testing.T) {
+	t.Parallel()
+	specs, err := ListCases(testBenchmarksRoot(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(specs) != 1 || specs[0].ID != "frontend-onboarding" {
+		t.Fatalf("unexpected benchmark specs: %+v", specs)
+	}
+	spec := specs[0]
+	if spec.Family != FamilyBenchmark || spec.SourceCommit == "" || len(spec.ExpectedBehavioralTrace) == 0 {
+		t.Fatalf("incomplete benchmark spec: %+v", spec)
+	}
+	prompt, err := os.ReadFile(filepath.Join(testBenchmarksRoot(t), spec.ID, spec.Prompt))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if mentionsRepositoryKnowledge(string(prompt)) {
+		t.Fatalf("benchmark prompt is not neutral: %s", prompt)
+	}
+}
+
+func TestOutcomeBenchmarkControlAndTreatmentIsolation(t *testing.T) {
+	t.Parallel()
+	controlTarget := filepath.Join(t.TempDir(), "control")
+	treatmentTarget := filepath.Join(t.TempDir(), "treatment")
+	control, err := Prepare(benchmarkPrepareOptions(controlTarget, ConditionControl, "claude-code", 2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	treatment, err := Prepare(benchmarkPrepareOptions(treatmentTarget, ConditionTreatment, "claude-code", 2))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if control.Prompt != treatment.Prompt {
+		t.Fatal("control and treatment received different task prompts")
+	}
+	if control.Rubric != "" || treatment.Rubric != "" {
+		t.Fatalf("blind benchmark rubric leaked during preparation: control=%q treatment=%q", control.Rubric, treatment.Rubric)
+	}
+	for _, prepared := range []PrepareResult{control, treatment} {
+		if prepared.AgentVersion != "test-agent-1" || prepared.ModelVersion != "test-model-1" || prepared.ReasoningConfiguration != "high" || prepared.TrialNumber != 2 || prepared.SourceCommit == "" || prepared.Baseline == "" {
+			t.Fatalf("prepared metadata was not preserved: %+v", prepared)
+		}
+	}
+	for _, forbidden := range []string{
+		".repo-knowledge",
+		".agents/skills/repository-knowledge/SKILL.md",
+		".claude/skills/repository-knowledge/SKILL.md",
+		".cursor/skills/repository-knowledge/SKILL.md",
+		"AGENTS.md",
+	} {
+		if _, err := os.Stat(filepath.Join(controlTarget, filepath.FromSlash(forbidden))); !os.IsNotExist(err) {
+			t.Errorf("control unexpectedly installed toolkit asset %s", forbidden)
+		}
+	}
+	if _, err := os.Stat(control.Baseline); err != nil {
+		t.Fatalf("control sidecar baseline is missing: %v", err)
+	}
+	manifestData, err := os.ReadFile(filepath.Join(treatmentTarget, ".repo-knowledge", "toolkit.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var manifest struct {
+		AgentAdapters []string `json:"agent_adapters"`
+	}
+	if err := json.Unmarshal(manifestData, &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if len(manifest.AgentAdapters) != 1 || manifest.AgentAdapters[0] != "claude-code" {
+		t.Fatalf("treatment adapters = %v, want only claude-code", manifest.AgentAdapters)
+	}
+	if _, err := os.Stat(filepath.Join(treatmentTarget, ".claude", "skills", "repository-knowledge", "SKILL.md")); err != nil {
+		t.Fatalf("requested treatment adapter is missing: %v", err)
+	}
+	for _, forbidden := range []string{
+		".agents/skills/repository-knowledge/SKILL.md",
+		".cursor/skills/repository-knowledge/SKILL.md",
+	} {
+		if _, err := os.Stat(filepath.Join(treatmentTarget, filepath.FromSlash(forbidden))); !os.IsNotExist(err) {
+			t.Errorf("treatment installed unrequested adapter asset %s", forbidden)
+		}
+	}
+
+	spec, caseRoot, err := LoadSpec(testBenchmarksRoot(t), "frontend-onboarding")
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture, err := resolveFixturePath(testBenchmarksRoot(t), caseRoot, spec.Fixture, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixtureFiles, err := hashRepository(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
+	controlFiles, err := hashRepository(controlTarget)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(controlFiles) != len(fixtureFiles) {
+		t.Fatalf("control contains %d files, fixture contains %d", len(controlFiles), len(fixtureFiles))
+	}
+	for relative, digest := range fixtureFiles {
+		for condition, target := range map[string]string{"control": controlTarget, "treatment": treatmentTarget} {
+			actual, err := hashFile(filepath.Join(target, filepath.FromSlash(relative)))
+			if err != nil || actual != digest {
+				t.Errorf("%s application file %s differs from fixture: digest=%s err=%v", condition, relative, actual, err)
+			}
+		}
+	}
+
+	for condition, target := range map[string]string{"control": controlTarget, "treatment": treatmentTarget} {
+		grade, err := Grade(GradeOptions{CasesRoot: testBenchmarksRoot(t), CaseID: "frontend-onboarding", Target: target})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if grade.Condition != condition || grade.TrialNumber != 2 || grade.AgentVersion != "test-agent-1" || grade.ModelVersion != "test-model-1" || grade.ReasoningConfiguration != "high" {
+			t.Errorf("%s grade metadata was not preserved: %+v", condition, grade)
+		}
+		if findCheck(t, grade, "fixture-source-preserved").Status != "pass" {
+			t.Errorf("%s untouched source did not pass protection: %+v", condition, grade.Checks)
+		}
+	}
+}
+
+func TestOutcomeBenchmarkProtectedSourceChecksBothConditions(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{ConditionControl, ConditionTreatment} {
+		condition := condition
+		t.Run(condition, func(t *testing.T) {
+			t.Parallel()
+			target := filepath.Join(t.TempDir(), "target")
+			if _, err := Prepare(benchmarkPrepareOptions(target, condition, "codex", 1)); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(target, "src", "data", "intelligence.json")
+			if err := os.WriteFile(path, []byte("{}\n"), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			grade, err := Grade(GradeOptions{CasesRoot: testBenchmarksRoot(t), CaseID: "frontend-onboarding", Target: target})
+			if err != nil {
+				t.Fatal(err)
+			}
+			check := findCheck(t, grade, "fixture-source-preserved")
+			if check.Status != "fail" || !strings.Contains(check.Detail, "src/data/intelligence.json (modified)") {
+				t.Fatalf("%s source protection check = %+v", condition, check)
+			}
+		})
+	}
+}
+
+func TestOutcomeBenchmarkConditionErrorsDoNotCreateOutput(t *testing.T) {
+	t.Parallel()
+	for _, condition := range []string{"", "experiment"} {
+		name := condition
+		if name == "" {
+			name = "missing"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			target := filepath.Join(t.TempDir(), "target")
+			options := benchmarkPrepareOptions(target, condition, "codex", 1)
+			_, err := Prepare(options)
+			if err == nil || !strings.Contains(err.Error(), "--condition control or --condition treatment") {
+				t.Fatalf("Prepare() error = %v, want condition error", err)
+			}
+			if _, statErr := os.Stat(target); !os.IsNotExist(statErr) {
+				t.Fatalf("invalid condition wrote output at %s", target)
+			}
+		})
+	}
+}
+
+func TestOutcomeBenchmarkRunMetadataIsRequiredBeforeOutput(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		remove func(*PrepareOptions)
+		want   string
+	}{
+		{name: "agent version", remove: func(options *PrepareOptions) { options.AgentVersion = "" }, want: "agent version is required"},
+		{name: "model version", remove: func(options *PrepareOptions) { options.ModelVersion = "" }, want: "model version is required"},
+		{name: "reasoning", remove: func(options *PrepareOptions) { options.ReasoningConfiguration = "" }, want: "reasoning configuration is required"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			target := filepath.Join(t.TempDir(), "target")
+			options := benchmarkPrepareOptions(target, ConditionControl, "codex", 1)
+			test.remove(&options)
+			_, err := Prepare(options)
+			if err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("Prepare() error = %v, want %q", err, test.want)
+			}
+			if _, statErr := os.Stat(target); !os.IsNotExist(statErr) {
+				t.Fatalf("missing metadata wrote output at %s", target)
+			}
+		})
+	}
+}
+
+func TestOutcomeBenchmarkResultRecordingIsImmutable(t *testing.T) {
+	t.Parallel()
+	target := filepath.Join(t.TempDir(), "target")
+	if _, err := Prepare(benchmarkPrepareOptions(target, ConditionControl, "codex", 3)); err != nil {
+		t.Fatal(err)
+	}
+	tokens := int64(1234)
+	grade, err := Grade(GradeOptions{
+		CasesRoot: testBenchmarksRoot(t), CaseID: "frontend-onboarding", Target: target,
+		DurationMillis: 9500, TokenUsage: &tokens,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grade.DeterministicStatus != "fail" || grade.SemanticStatus != "pending_human_or_model_review" {
+		t.Fatalf("failed trial metadata was overstated: %+v", grade)
+	}
+	artifact := filepath.Join(t.TempDir(), "output.tar.gz")
+	if err := os.WriteFile(artifact, []byte("preserved output\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resultsRoot := filepath.Join(t.TempDir(), "results")
+	recorded, err := Record(RecordOptions{ResultsRoot: resultsRoot, RunDate: "2026-09-06", Artifact: artifact}, grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recorded.Result.RunDate != "2026-09-06" || recorded.Result.PreservedArtifact == "" || recorded.Result.TokenUsage == nil || *recorded.Result.TokenUsage != tokens {
+		t.Fatalf("recorded result metadata is incomplete: %+v", recorded.Result)
+	}
+	data, err := os.ReadFile(recorded.ResultPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var persisted GradeResult
+	if err := json.Unmarshal(data, &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if persisted.Condition != ConditionControl || persisted.TrialNumber != 3 || persisted.DeterministicStatus != "fail" || persisted.PreservedArtifact == "" || filepath.IsAbs(persisted.Rubric) {
+		t.Fatalf("persisted result is incomplete: %+v", persisted)
+	}
+	if _, err := Record(RecordOptions{ResultsRoot: resultsRoot, RunDate: "2026-09-06", Artifact: artifact}, grade); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("second Record() error = %v, want immutable output refusal", err)
 	}
 }
 
@@ -69,6 +317,31 @@ func TestFrontendObjectiveCandidatePassesDeterministicChecks(t *testing.T) {
 	}
 	if grade.OverallStatus != "pending_semantic_review" || grade.SemanticStatus != "pending_human_or_model_review" {
 		t.Fatalf("semantic result was overstated: %+v", grade)
+	}
+}
+
+func TestSemanticSuccessRequiresExplicitReviewMetadata(t *testing.T) {
+	t.Parallel()
+	target := filepath.Join(t.TempDir(), "target")
+	if _, err := Prepare(PrepareOptions{CasesRoot: testCasesRoot(t), CaseID: "frontend-nextjs", Output: target, Agent: "codex"}); err != nil {
+		t.Fatal(err)
+	}
+	writeFrontendObjectiveCandidate(t, target)
+	score := &SemanticScore{Earned: 18, Available: 18}
+	if _, err := Grade(GradeOptions{
+		CasesRoot: testCasesRoot(t), CaseID: "frontend-nextjs", Target: target, SemanticScore: score,
+	}); err == nil || !strings.Contains(err.Error(), "explicit semantic status") {
+		t.Fatalf("Grade() error = %v, want explicit semantic status requirement", err)
+	}
+	grade, err := Grade(GradeOptions{
+		CasesRoot: testCasesRoot(t), CaseID: "frontend-nextjs", Target: target,
+		SemanticStatus: "pass", SemanticScore: score, SemanticReviewer: "reviewer@example.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grade.DeterministicStatus != "pass" || grade.SemanticStatus != "pass" || grade.OverallStatus != "pass" || grade.SemanticReviewer == "" {
+		t.Fatalf("explicit reviewed grade = %+v", grade)
 	}
 }
 
@@ -143,6 +416,32 @@ func testCasesRoot(t *testing.T) string {
 		t.Fatal("resolve test source path")
 	}
 	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "evals", "cases"))
+}
+
+func testBenchmarksRoot(t *testing.T) string {
+	t.Helper()
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("resolve test source path")
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "evals", "benchmarks"))
+}
+
+func benchmarkPrepareOptions(target, condition, agent string, trial int) PrepareOptions {
+	return PrepareOptions{
+		CasesRoot: testBenchmarkRootFromSource(), CaseID: "frontend-onboarding", Output: target,
+		Condition: condition, Agent: agent, AgentVersion: "test-agent-1",
+		ModelVersion: "test-model-1", ReasoningConfiguration: "high",
+		RepositoryKnowledgeRevision: "test-toolkit-commit", TrialNumber: trial,
+	}
+}
+
+func testBenchmarkRootFromSource() string {
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		return "evals/benchmarks"
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(file), "..", "..", "evals", "benchmarks"))
 }
 
 func findCheck(t *testing.T, grade GradeResult, id string) CheckResult {

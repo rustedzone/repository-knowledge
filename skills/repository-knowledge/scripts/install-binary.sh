@@ -67,7 +67,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 if ! printf '%s\n' "$version" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
-  fail "--version must be a pinned semantic release tag such as v0.9.0"
+  fail "--version must be a pinned semantic release tag such as v0.10.0"
 fi
 case "$repository" in
   *[!A-Za-z0-9_.\/-]*|/*|*/|*//*|*/*/*|"") fail "--repository must be OWNER/REPO" ;;

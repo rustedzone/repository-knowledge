@@ -71,7 +71,7 @@ go run ./cmd/repo-knowledge-eval prepare \
   --agent-version codex-desktop-2026.09 \
   --model-version gpt-5.6-sol \
   --reasoning high \
-  --repository-knowledge-revision v0.9.0 \
+  --repository-knowledge-revision v0.10.0 \
   --trial 1
 
 go run ./cmd/repo-knowledge-eval prepare \
@@ -83,7 +83,7 @@ go run ./cmd/repo-knowledge-eval prepare \
   --agent-version codex-desktop-2026.09 \
   --model-version gpt-5.6-sol \
   --reasoning high \
-  --repository-knowledge-revision v0.9.0 \
+  --repository-knowledge-revision v0.10.0 \
   --trial 1
 ```
 
@@ -97,7 +97,7 @@ Harness tests verify that invalid or missing conditions write nothing, control h
 make build
 TARGET_REPOSITORY="$(mktemp -d)"
 git -C "${TARGET_REPOSITORY}" init
-./repo-knowledge install --target "${TARGET_REPOSITORY}" --all-agents --source local --ref v0.9.0
+./repo-knowledge install --target "${TARGET_REPOSITORY}" --all-agents --source local --ref v0.10.0
 ./repo-knowledge doctor --target "${TARGET_REPOSITORY}"
 ./repo-knowledge scan --target "${TARGET_REPOSITORY}"
 ./repo-knowledge rebuild --target "${TARGET_REPOSITORY}"

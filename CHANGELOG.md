@@ -4,6 +4,8 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-06
+
 ### Added
 
 - Workflow-security regression coverage that rejects mutable action tags, branches, short commit references, and mutable Docker tags across every GitHub Actions workflow.

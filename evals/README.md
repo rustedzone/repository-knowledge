@@ -62,7 +62,7 @@ go run ./cmd/repo-knowledge-eval prepare \
   --agent-version codex-desktop-2026.09 \
   --model-version gpt-5.6-sol \
   --reasoning high \
-  --repository-knowledge-revision v0.9.0 \
+  --repository-knowledge-revision v0.10.0 \
   --trial 1
 
 go run ./cmd/repo-knowledge-eval prepare \
@@ -74,11 +74,11 @@ go run ./cmd/repo-knowledge-eval prepare \
   --agent-version codex-desktop-2026.09 \
   --model-version gpt-5.6-sol \
   --reasoning high \
-  --repository-knowledge-revision v0.9.0 \
+  --repository-knowledge-revision v0.10.0 \
   --trial 1
 ```
 
-Use the released version being evaluated, or replace `v0.9.0` with the exact candidate commit for an unreleased build. Keep that value identical across the pair.
+Use the released version being evaluated, or replace `v0.10.0` with the exact candidate commit for an unreleased build. Keep that value identical across the pair.
 
 `control` copies only the fixture into the target; it does not install policy, rules, skills, hooks, a toolkit manifest, or an in-target experiment marker. For both conditions, the harness writes baseline metadata to the adjacent `<target>.repo-knowledge-eval-baseline.json` sidecar. `treatment` copies the same fixture and installs only the requested adapter plus the shared toolkit assets that adapter requires. The sidecar records the condition, case/source revisions, agent and host version, model version, reasoning configuration, Repository Knowledge revision, and trial number. Missing or invalid conditions fail before the output directory or sidecar is created.
 

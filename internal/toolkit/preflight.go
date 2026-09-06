@@ -323,7 +323,7 @@ func parsePreflightHookEvent(agent string, input io.Reader) (preflightHookEvent,
 	}
 	decoder := json.NewDecoder(input)
 	if err := decoder.Decode(&raw); err != nil && err != io.EOF {
-		return preflightHookEvent{}, fmt.Errorf("parse %s hook input: %w", agent, err)
+		return preflightHookEvent{}, fmt.Errorf("parse %s hook input: %w", displayAgentName(agent), err)
 	}
 	event := preflightHookEvent{InvocationNum: raw.InvocationNum, ToolName: raw.ToolName, ToolInput: raw.ToolInput}
 	switch agent {
@@ -335,6 +335,13 @@ func parsePreflightHookEvent(agent string, input io.Reader) (preflightHookEvent,
 		event.ConversationID = raw.ConversationID
 	}
 	return event, nil
+}
+
+func displayAgentName(agent string) string {
+	if agent == agentAntigravityIDE {
+		return "Antigravity"
+	}
+	return agent
 }
 
 func PreflightGate(target, agent string, input io.Reader) (PreflightGateResult, error) {

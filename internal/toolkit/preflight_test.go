@@ -275,12 +275,12 @@ func TestPreflightActivateRequiresRoutes(t *testing.T) {
 	}
 }
 
-func TestPreflightGateRejectsOtherAgentsAndAllowsAbsoluteKnowledgePaths(t *testing.T) {
+func TestPreflightGateSupportsOtherAgentsAndAllowsAbsoluteKnowledgePaths(t *testing.T) {
+	if displayAgentName(agentCodex) != agentCodex || displayAgentName(agentAntigravityIDE) != "Antigravity" {
+		t.Fatal("host display names do not preserve non-Antigravity adapter names")
+	}
 	if event, err := parseAntigravityHookEvent(nil); err != nil || event.ConversationID != "" {
 		t.Fatalf("nil event parse = %+v, %v", event, err)
-	}
-	if _, err := PreflightGate(".", agentCodex, strings.NewReader(`{}`)); err == nil || !strings.Contains(err.Error(), "only supports") {
-		t.Fatalf("non-Antigravity gate error = %v", err)
 	}
 	root := newGitRepository(t)
 	if _, err := Install(InstallOptions{Target: root, AgentAdapters: []string{agentAntigravityIDE}, AntigravityPreflight: AntigravityPreflightStrict}); err != nil {
@@ -288,6 +288,9 @@ func TestPreflightGateRejectsOtherAgentsAndAllowsAbsoluteKnowledgePaths(t *testi
 	}
 	if !knowledgePathReadAllowed(root, json.RawMessage(`{"path":"`+filepath.Join(root, "docs", "index.md")+`"}`)) {
 		t.Fatal("absolute documentation path was not allowlisted")
+	}
+	if result, err := PreflightGate(root, agentCodex, strings.NewReader(`{"session_id":"observe","tool_name":"Bash","tool_input":{"command":"git status"}}`)); err != nil || result.Decision != "allow" {
+		t.Fatalf("Codex observe gate = %+v, %v", result, err)
 	}
 }
 

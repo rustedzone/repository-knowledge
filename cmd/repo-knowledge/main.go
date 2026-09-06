@@ -92,6 +92,8 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
 		allowDowngrade := flags.Bool("allow-downgrade", false, "allow update to an older toolkit version")
 		antigravityPreflight := flags.String("antigravity-preflight", "", "Antigravity preflight mode: observe or strict (default: observe; update retains existing mode)")
+		var agentPreflight stringList
+		flags.Var(&agentPreflight, "agent-preflight", "per-agent preflight mode; repeatable: AGENT=observe or AGENT=strict")
 		allAgents := flags.Bool("all-agents", false, "select every supported agent adapter; cannot be combined with --agent")
 		var adapters stringList
 		agentHelp := "agent adapter to install; repeatable: codex, claude-code, antigravity-ide, cursor (default: codex)"
@@ -104,7 +106,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		}
 		result, err := toolkit.Install(toolkit.InstallOptions{
 			Target: *target, Source: *source, Ref: *ref, AgentAdapters: adapters,
-			AllAgentAdapters: *allAgents, Update: command == "update", AllowDowngrade: *allowDowngrade, AntigravityPreflight: *antigravityPreflight,
+			AllAgentAdapters: *allAgents, Update: command == "update", AllowDowngrade: *allowDowngrade, AntigravityPreflight: *antigravityPreflight, AgentPreflight: agentPreflight,
 		})
 		return commandOutcome{value: result, json: *jsonOutput}, err
 	case "scan", "doctor":
@@ -143,7 +145,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 	case "preflight-activate":
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository path or a path nested below it")
-		token := flags.String("token", "", "opaque token injected by the Antigravity preflight hook")
+		token := flags.String("token", "", "opaque token injected by a strict preflight hook")
 		var routes stringList
 		flags.Var(&routes, "route", "selected documentation route; repeatable")
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
@@ -158,7 +160,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 	case "preflight-gate":
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository path or a path nested below it")
-		agent := flags.String("agent", "", "agent hook protocol: antigravity-ide")
+		agent := flags.String("agent", "", "agent hook protocol: codex, claude-code, antigravity-ide, or cursor")
 		if err := flags.Parse(args); err != nil {
 			return commandOutcome{}, err
 		}

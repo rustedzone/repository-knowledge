@@ -114,6 +114,34 @@ func TestRunInstallStrictAntigravityPreflightAndDoctorLiveHooks(t *testing.T) {
 	}
 }
 
+func TestRunInstallStrictPreflightForCodexClaudeAndCursor(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{
+		"install", "--target", root,
+		"--agent", "codex", "--agent", "claude-code", "--agent", "cursor",
+		"--agent-preflight", "codex=strict",
+		"--agent-preflight", "claude-code=strict",
+		"--agent-preflight", "cursor=strict",
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run(strict install) code = %d, stderr = %q", code, stderr.String())
+	}
+	for _, relative := range []string{".codex/hooks.json", ".claude/settings.json", ".cursor/hooks.json"} {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(relative)))
+		if err != nil || !strings.Contains(string(data), "preflight-gate") {
+			t.Fatalf("strict install %s = %s, %v", relative, data, err)
+		}
+	}
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"doctor", "--target", root, "--live-hooks"}, &stdout, &stderr)
+	if code != 0 || strings.Count(stdout.String(), "preflight-gate-self-test") != 3 {
+		t.Fatalf("doctor strict hosts code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+}
+
 func TestRunHookContextUsesAgentProtocol(t *testing.T) {
 	root := t.TempDir()
 	var stdout bytes.Buffer

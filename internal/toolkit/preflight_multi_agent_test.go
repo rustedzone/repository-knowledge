@@ -8,25 +8,25 @@ import (
 
 func TestStrictPreflightBlocksRepositoryToolsForEverySupportedAgent(t *testing.T) {
 	tests := []struct {
-		agent       string
+		agent        string
 		contextInput string
 		gateInput    string
 		denyMarker   string
 	}{
 		{
-			agent:       agentCodex,
+			agent:        agentCodex,
 			contextInput: `{"session_id":"codex-sso","source":"startup"}`,
 			gateInput:    `{"session_id":"codex-sso","tool_name":"Bash","tool_input":{"command":"git status"}}`,
 			denyMarker:   `"permissionDecision":"deny"`,
 		},
 		{
-			agent:       agentClaudeCode,
+			agent:        agentClaudeCode,
 			contextInput: `{"session_id":"claude-sso","source":"startup"}`,
 			gateInput:    `{"session_id":"claude-sso","tool_name":"Bash","tool_input":{"command":"git status"}}`,
 			denyMarker:   `"permissionDecision":"deny"`,
 		},
 		{
-			agent:       agentCursor,
+			agent:        agentCursor,
 			contextInput: `{"conversation_id":"cursor-sso"}`,
 			gateInput:    `{"conversation_id":"cursor-sso","tool_name":"Shell","tool_input":{"command":"git status"}}`,
 			denyMarker:   `"permission":"deny"`,

@@ -25,7 +25,7 @@ type hookConfigMutation struct {
 	existed bool
 }
 
-func prepareAgentHooks(target string, oldAdapters, adapters []string, update bool) ([]string, []hookConfigMutation, error) {
+func prepareAgentHooks(target string, oldAdapters, adapters []string, update bool, antigravityPreflight string) ([]string, []hookConfigMutation, error) {
 	registrations := make([]string, 0, len(adapters))
 	mutations := make([]hookConfigMutation, 0, len(adapters))
 	for _, agent := range supportedAgentAdapters {
@@ -33,7 +33,7 @@ func prepareAgentHooks(target string, oldAdapters, adapters []string, update boo
 		if !enabled && (!update || !contains(oldAdapters, agent)) {
 			continue
 		}
-		mutation, err := prepareAgentHookMutation(target, agent, enabled)
+		mutation, err := prepareAgentHookMutation(target, agent, enabled, antigravityPreflight)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -55,7 +55,7 @@ func applyAgentHooks(mutations []hookConfigMutation) error {
 	return nil
 }
 
-func prepareAgentHookMutation(target, agent string, enabled bool) (hookConfigMutation, error) {
+func prepareAgentHookMutation(target, agent string, enabled bool, antigravityPreflight string) (hookConfigMutation, error) {
 	relative := hookConfigPaths[agent]
 	path, err := repositoryPath(target, relative, "agent hook configuration")
 	if err != nil {
@@ -95,7 +95,7 @@ func prepareAgentHookMutation(target, agent string, enabled bool) (hookConfigMut
 			}},
 		})
 	case agentAntigravityIDE:
-		err = reconcileAntigravityHook(config, true)
+		err = reconcileAntigravityHook(config, true, antigravityPreflight == AntigravityPreflightStrict)
 	case agentCursor:
 		err = reconcileCursorHook(config, true)
 	default:
@@ -112,7 +112,7 @@ func removeAgentHookFromConfig(config map[string]any, agent string) error {
 	case agentCodex, agentClaudeCode:
 		return reconcileMatcherHook(config, "SessionStart", managedHookCommand(agent), false, nil)
 	case agentAntigravityIDE:
-		return reconcileAntigravityHook(config, false)
+		return reconcileAntigravityHook(config, false, false)
 	case agentCursor:
 		return reconcileCursorHook(config, false)
 	default:
@@ -122,6 +122,10 @@ func removeAgentHookFromConfig(config map[string]any, agent string) error {
 
 func managedHookCommand(agent string) string {
 	return "repo-knowledge hook-context --agent " + agent
+}
+
+func managedPreflightGateCommand(agent string) string {
+	return "repo-knowledge preflight-gate --agent " + agent
 }
 
 func readHookConfig(path string) (map[string]any, bool, error) {
@@ -192,7 +196,7 @@ func reconcileMatcherHook(config map[string]any, event, command string, enabled 
 	return nil
 }
 
-func reconcileAntigravityHook(config map[string]any, enabled bool) error {
+func reconcileAntigravityHook(config map[string]any, enabled, strict bool) error {
 	if existing, ok := config[antigravityHookKey]; ok {
 		if !containsHookCommand(existing, managedHookCommand(agentAntigravityIDE)) {
 			return fmt.Errorf("top-level key %q already belongs to the consuming repository", antigravityHookKey)
@@ -200,6 +204,14 @@ func reconcileAntigravityHook(config map[string]any, enabled bool) error {
 		delete(config, antigravityHookKey)
 	}
 	if enabled {
+		preToolUse := []any{}
+		if strict {
+			preToolUse = append(preToolUse, map[string]any{
+				"type":    "command",
+				"command": managedPreflightGateCommand(agentAntigravityIDE),
+				"timeout": float64(10),
+			})
+		}
 		config[antigravityHookKey] = map[string]any{
 			"enabled": true,
 			"PreInvocation": []any{map[string]any{
@@ -207,6 +219,9 @@ func reconcileAntigravityHook(config map[string]any, enabled bool) error {
 				"command": managedHookCommand(agentAntigravityIDE),
 				"timeout": float64(10),
 			}},
+		}
+		if len(preToolUse) > 0 {
+			config[antigravityHookKey].(map[string]any)["PreToolUse"] = preToolUse
 		}
 	}
 	return nil
@@ -352,7 +367,10 @@ func hasAgentHookRegistration(root, agent string) (bool, string) {
 		return containsHookCommand(entries, command), relative
 	case agentAntigravityIDE:
 		value, ok := config[antigravityHookKey]
-		return ok && containsHookCommand(value, command), relative
+		if !ok || !containsHookCommand(value, command) {
+			return false, relative
+		}
+		return true, relative
 	case agentCursor:
 		hooks, ok := config["hooks"].(map[string]any)
 		if !ok {

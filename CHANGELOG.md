@@ -4,6 +4,12 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+### Added
+
+- Opt-in Antigravity `--antigravity-preflight strict` mode with an opaque, expiring activation session and a managed `PreToolUse` gate that blocks repository discovery, commands, writes, and subagents until routed documentation is activated.
+- `preflight-activate` and `preflight-gate` commands, strict gate registration checks in `doctor`, and focused regressions for pending, active, expired, cross-repository, and shell-chained activation behavior.
+- A repeatable neutral Google SSO Antigravity strict-preflight regression protocol requiring three successful traces before release.
+
 ## [0.10.0] - 2026-09-06
 
 ### Added

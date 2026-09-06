@@ -23,7 +23,7 @@ When adding an adapter:
 1. Add its canonical `--agent` name and any deliberate aliases to `internal/toolkit/install.go`.
    Add the canonical name to `supportedAgentAdapters` so `--all-agents` includes it in stable manifest order.
 2. Map embedded rules and the shared skill to the agent's documented project locations.
-3. If the host has lifecycle hooks, register the earliest context-injection event, encode the host's output protocol in `hook-context`, preserve every unrelated field in shared hook files, and keep host trust prompts visible.
+3. If the host has lifecycle hooks, register the earliest context-injection event, encode the host's output protocol in `hook-context`, preserve every unrelated field in shared hook files, and keep host trust prompts visible. If the host can deny tool use, keep the gate adapter-specific and require an explicit opt-in mode, bounded state, deterministic recovery, and a narrow knowledge-read allowlist.
 4. Add adapter-aware `doctor` checks. Exclude fully toolkit-managed adapter files from scan and impact analysis; exclude shared hook containers only when they contain no consumer-owned configuration.
-5. Verify single-adapter, multi-adapter, update-preservation, explicit adapter-switch, malformed-hook, consumer-hook preservation, context-output, and missing-registration behavior.
+5. Verify single-adapter, multi-adapter, update-preservation, explicit adapter-switch, malformed-hook, consumer-hook preservation, context-output, gate activation, expiry, cross-repository isolation, and missing-registration behavior.
 6. Document the native paths, trust/reload behavior, binary-on-PATH requirement, and installation command.

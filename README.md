@@ -64,7 +64,7 @@ Use `--agent claude-code`, `--agent antigravity-ide`, or `--agent cursor` for an
 Repository Knowledge makes correct repository behavior cheaper and observable; it does not guarantee agent compliance or understanding.
 
 - Documentation is routing and intent evidence, not unquestionable truth. Current runtime behavior, tests, schemas, migrations, effective configuration, and implementation take precedence for their respective claims.
-- Native hooks are activation guardrails. A host may require trust, may disable hooks, or may surface a failed hook without blocking the session. The required preflight receipt makes a skipped workflow visible.
+- Native hooks are activation guardrails. A host may require trust, may disable hooks, or may surface a failed hook without blocking the session. Antigravity can opt into `--antigravity-preflight strict` to deny repository tool calls until routed knowledge is activated; that still does not prove the model understood the material or prevent a pure-text response.
 - `scan` and `rebuild` produce structural discovery data, not semantic documentation. An agent still has to inspect implementation and tests to explain behavior accurately.
 - CI validates whether a material diff has documentation or an explicit impact decision. It does not determine semantic correctness, rewrite documentation, or commit changes.
 - The current outcome benchmark has not been executed and does not support a performance claim.
@@ -106,6 +106,7 @@ For documentation generation, ask the installed agent to inspect the complete re
 | `acknowledge` | Record a documentation-impact decision bound to that fingerprint. |
 | `validate-doc-impact` | Apply advisory, acknowledgment, or explicitly mapped enforcement. |
 | `hook-context` | Emit the bounded repository preflight in the selected agent's native protocol. |
+| `preflight-activate` | Activate an injected strict Antigravity preflight token with selected documentation routes. |
 
 See the [installation guide](docs/installation.md) for complete usage and the [architecture guide](docs/architecture.md) for ownership and safety boundaries.
 

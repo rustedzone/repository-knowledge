@@ -91,6 +91,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		ref := flags.String("ref", refDefault, "pinned toolkit release ref")
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
 		allowDowngrade := flags.Bool("allow-downgrade", false, "allow update to an older toolkit version")
+		antigravityPreflight := flags.String("antigravity-preflight", "", "Antigravity preflight mode: observe or strict (default: observe; update retains existing mode)")
 		allAgents := flags.Bool("all-agents", false, "select every supported agent adapter; cannot be combined with --agent")
 		var adapters stringList
 		agentHelp := "agent adapter to install; repeatable: codex, claude-code, antigravity-ide, cursor (default: codex)"
@@ -103,13 +104,14 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		}
 		result, err := toolkit.Install(toolkit.InstallOptions{
 			Target: *target, Source: *source, Ref: *ref, AgentAdapters: adapters,
-			AllAgentAdapters: *allAgents, Update: command == "update", AllowDowngrade: *allowDowngrade,
+			AllAgentAdapters: *allAgents, Update: command == "update", AllowDowngrade: *allowDowngrade, AntigravityPreflight: *antigravityPreflight,
 		})
 		return commandOutcome{value: result, json: *jsonOutput}, err
 	case "scan", "doctor":
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository root")
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
+		liveHooks := flags.Bool("live-hooks", false, "exercise supported strict preflight gate behavior in-process (doctor only)")
 		if err := flags.Parse(args); err != nil {
 			return commandOutcome{json: *jsonOutput}, err
 		}
@@ -118,6 +120,9 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 			return commandOutcome{value: value, json: *jsonOutput}, err
 		}
 		value, err := toolkit.Doctor(*target)
+		if *liveHooks {
+			value, err = toolkit.DoctorLive(*target)
+		}
 		exitCode := 0
 		if value.Status == "fail" {
 			exitCode = 1
@@ -134,6 +139,33 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 			return commandOutcome{}, fmt.Errorf("--agent is required")
 		}
 		value, err := toolkit.HookContext(*target, *agent, stdin)
+		return commandOutcome{value: value}, err
+	case "preflight-activate":
+		flags := newFlagSet(command, stderr)
+		target := flags.String("target", ".", "repository path or a path nested below it")
+		token := flags.String("token", "", "opaque token injected by the Antigravity preflight hook")
+		var routes stringList
+		flags.Var(&routes, "route", "selected documentation route; repeatable")
+		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
+		if err := flags.Parse(args); err != nil {
+			return commandOutcome{json: *jsonOutput}, err
+		}
+		if strings.TrimSpace(*token) == "" {
+			return commandOutcome{json: *jsonOutput}, fmt.Errorf("--token is required")
+		}
+		value, err := toolkit.PreflightActivate(*target, *token, routes)
+		return commandOutcome{value: value, json: *jsonOutput}, err
+	case "preflight-gate":
+		flags := newFlagSet(command, stderr)
+		target := flags.String("target", ".", "repository path or a path nested below it")
+		agent := flags.String("agent", "", "agent hook protocol: antigravity-ide")
+		if err := flags.Parse(args); err != nil {
+			return commandOutcome{}, err
+		}
+		if strings.TrimSpace(*agent) == "" {
+			return commandOutcome{}, fmt.Errorf("--agent is required")
+		}
+		value, err := toolkit.PreflightGate(*target, *agent, stdin)
 		return commandOutcome{value: value}, err
 	case "audit", "impact", "validate-doc-impact":
 		flags := newFlagSet(command, stderr)
@@ -248,6 +280,10 @@ func summarize(command string, value any) string {
 		return fmt.Sprintf("structural inventory proposal: %s\nthis does not generate semantic documentation\nnext: review the proposal, optionally rerun with --apply, then %s", result.Proposal, result.NextStep)
 	case toolkit.HookContextResult:
 		return result.Output
+	case toolkit.PreflightGateResult:
+		return result.Output
+	case toolkit.PreflightActivationResult:
+		return fmt.Sprintf("preflight: %s\nroutes: %s", result.Status, strings.Join(result.Routes, ", "))
 	default:
 		data, _ := json.MarshalIndent(value, "", "  ")
 		return string(data)
@@ -257,5 +293,5 @@ func summarize(command string, value any) string {
 func printUsage(output io.Writer) {
 	name := filepath.Base(os.Args[0])
 	fmt.Fprintf(output, "Usage: %s <command> [options]\n\n", name)
-	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, version")
+	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, preflight-activate, preflight-gate, version")
 }

@@ -42,17 +42,23 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 		}
 		return HookContextResult{Agent: agent, Root: root, Output: string(output)}, nil
 	case agentAntigravityIDE:
-		var event struct {
-			InvocationNumber int `json:"invocationNum"`
+		event, err := parseAntigravityHookEvent(input)
+		if err != nil {
+			return HookContextResult{}, err
 		}
-		if input != nil {
-			decoder := json.NewDecoder(input)
-			if err := decoder.Decode(&event); err != nil && err != io.EOF {
-				return HookContextResult{}, fmt.Errorf("parse Antigravity hook input: %w", err)
-			}
+		manifest, _, err := readOptionalManifest(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
+		if err != nil {
+			return HookContextResult{}, err
 		}
-		if event.InvocationNumber > 0 {
+		if event.InvocationNum > 0 {
 			context = antigravityReminder
+		}
+		if manifest.AntigravityPreflight == AntigravityPreflightStrict {
+			session, err := startOrResumePreflight(root, event.ConversationID)
+			if err != nil {
+				return HookContextResult{}, err
+			}
+			context += "\n\n" + strictPreflightContext(session)
 		}
 		output, err := json.Marshal(map[string]any{
 			"injectSteps": []map[string]string{{"ephemeralMessage": context}},
@@ -64,6 +70,26 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 	default:
 		return HookContextResult{}, fmt.Errorf("unsupported hook agent %q", agent)
 	}
+}
+
+func strictPreflightContext(session preflightSession) string {
+	if session.Active {
+		return strings.Join([]string{
+			"# Antigravity strict preflight",
+			"",
+			"status: active",
+			"Repository Knowledge is active for this conversation. Repository discovery and changes are permitted until the preflight session expires or its knowledge inputs change.",
+		}, "\n")
+	}
+	return strings.Join([]string{
+		"# Antigravity strict preflight",
+		"",
+		"status: pending",
+		"Repository tools are blocked until preflight activation. Read the installed skill, contract, repository configuration, documentation index, and the relevant documentation route first.",
+		"Activate with:",
+		"repo-knowledge preflight-activate --token " + session.Token + " --route docs/index.md",
+		"Replace or add `--route` values with the documentation routes selected for this task.",
+	}, "\n")
 }
 
 func findInstalledRepositoryRoot(target string) (string, error) {

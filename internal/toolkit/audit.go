@@ -57,6 +57,15 @@ func Doctor(root string) (DoctorReport, error) {
 		add("antigravity-ide-entry-contract", regularFile(filepath.Join(root, ".agents", "rules", "repository-knowledge.md")), ".agents/rules/repository-knowledge.md")
 		ok, detail := hasAgentHookRegistration(root, agentAntigravityIDE)
 		add("antigravity-ide-preflight-hook", ok, detail)
+		mode := manifest.AntigravityPreflight
+		if mode == "" {
+			mode = AntigravityPreflightObserve
+		}
+		add("antigravity-ide-preflight-mode", mode == AntigravityPreflightObserve || mode == AntigravityPreflightStrict, mode)
+		if mode == AntigravityPreflightStrict {
+			ok, detail := hasAntigravityGateRegistration(root)
+			add("antigravity-ide-preflight-gate", ok, detail)
+		}
 	}
 	if contains(adapters, agentCursor) {
 		add("cursor-skill", regularFile(filepath.Join(root, ".cursor", "skills", "repository-knowledge", "SKILL.md")), ".cursor/skills/repository-knowledge/SKILL.md")
@@ -108,6 +117,80 @@ func Doctor(root string) (DoctorReport, error) {
 		}
 	}
 	return DoctorReport{Status: status, Checks: checks}, nil
+}
+
+// DoctorLive adds an in-process strict Antigravity gate check. It validates the
+// installed gate behavior but cannot establish that an external host trusted or
+// invoked its configured hooks.
+func DoctorLive(root string) (DoctorReport, error) {
+	report, err := Doctor(root)
+	if err != nil {
+		return DoctorReport{}, err
+	}
+	manifest, exists, err := readOptionalManifest(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
+	if err != nil || !exists || !contains(manifest.AgentAdapters, agentAntigravityIDE) || manifest.AntigravityPreflight != AntigravityPreflightStrict {
+		return report, err
+	}
+	ok, detail := strictAntigravityGateSelfTest(root)
+	report.Checks = append(report.Checks, Check{ID: "antigravity-ide-preflight-gate-self-test", OK: ok, Detail: detail})
+	if !ok {
+		report.Status = "fail"
+	}
+	return report, nil
+}
+
+func strictAntigravityGateSelfTest(root string) (bool, string) {
+	token, err := newPreflightToken()
+	if err != nil {
+		return false, err.Error()
+	}
+	conversation := "doctor-" + token[:16]
+	statePath, err := preflightSessionPath(root, conversation)
+	if err != nil {
+		return false, err.Error()
+	}
+	defer func() { _ = os.Remove(statePath) }()
+	if _, err := startOrResumePreflight(root, conversation); err != nil {
+		return false, err.Error()
+	}
+	pendingInput := strings.NewReader(`{"conversationId":"` + conversation + `","toolCall":{"name":"grep_search","arguments":{"query":"preflight","path":"internal"}}}`)
+	pending, err := PreflightGate(root, agentAntigravityIDE, pendingInput)
+	if err != nil || pending.Decision != "deny" {
+		if err != nil {
+			return false, err.Error()
+		}
+		return false, "pending source discovery was not denied"
+	}
+	session, err := readPreflightSession(statePath)
+	if err != nil {
+		return false, err.Error()
+	}
+	_, config, err := preflightDigests(root)
+	if err != nil {
+		return false, err.Error()
+	}
+	if _, err := PreflightActivate(root, session.Token, []string{config.Documentation.Index}); err != nil {
+		return false, err.Error()
+	}
+	activeInput := strings.NewReader(`{"conversationId":"` + conversation + `","toolCall":{"name":"grep_search","arguments":{"query":"preflight","path":"internal"}}}`)
+	active, err := PreflightGate(root, agentAntigravityIDE, activeInput)
+	if err != nil || active.Decision != "allow" {
+		if err != nil {
+			return false, err.Error()
+		}
+		return false, "active source discovery was not allowed"
+	}
+	return true, "pending discovery denied; activation enabled discovery"
+}
+
+func hasAntigravityGateRegistration(root string) (bool, string) {
+	relative := hookConfigPaths[agentAntigravityIDE]
+	config, _, err := readHookConfig(filepath.Join(root, filepath.FromSlash(relative)))
+	if err != nil {
+		return false, err.Error()
+	}
+	value, ok := config[antigravityHookKey]
+	return ok && containsHookCommand(value, managedPreflightGateCommand(agentAntigravityIDE)), relative
 }
 
 func Audit(root, base, head string) (AuditReport, error) {

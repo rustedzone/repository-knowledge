@@ -14,9 +14,9 @@
 | `.cursor/rules/repository-knowledge.mdc` | Toolkit | Cursor always-applied prompt-routing rule. |
 | `.codex/hooks.json` nested `SessionStart` entry | Shared | Toolkit owns only its exact Codex preflight command; all unrelated hook configuration is consumer-owned. |
 | `.claude/settings.json` nested `SessionStart` entry | Shared | Toolkit owns only its exact Claude Code preflight command; all unrelated settings and hooks are consumer-owned. |
-| `.agents/hooks.json` `repository-knowledge-preflight` entry | Shared | Toolkit owns only its named Antigravity preflight entry; all other hook configuration is consumer-owned. |
+| `.agents/hooks.json` `repository-knowledge-preflight` entry | Shared | Toolkit owns only its named Antigravity preflight entries; all other hook configuration is consumer-owned. |
 | `.cursor/hooks.json` nested `sessionStart` entry | Shared | Toolkit owns only its exact Cursor preflight command; all unrelated hook configuration is consumer-owned. |
-| `.repo-knowledge/toolkit.json` | Toolkit-generated | Version, source, agent adapters, ownership manifest, and managed-file digests. |
+| `.repo-knowledge/toolkit.json` | Toolkit-generated | Version, source, agent adapters, Antigravity preflight mode, ownership manifest, and managed-file digests. |
 | `AGENTS.md` managed block | Toolkit | Codex prompt routing; surrounding instructions remain consumer-owned. |
 | `.repo-knowledge/repository.json` | Consumer | Repository identity, knowledge routes, and CI mode. |
 | `.repo-knowledge/local-invariants.json` | Consumer | Repository-specific objective or semantic contracts. |
@@ -30,6 +30,10 @@ The release binary is installed on developer machines and CI runners, not commit
 Toolkit-managed adapter rules and skills are excluded from structural scan inventory and ignored by default documentation-impact classification. A shared hook container is excluded from scan only when removing the toolkit entry leaves it empty; a container with consumer settings remains normal repository evidence. Hook containers are not blanket-ignored by documentation-impact classification because that would conceal consumer hook changes.
 
 The generated inventory is an optional structural appendix. Semantic guides, `docs/index.md`, and capability routes are consumer-owned knowledge maintained by agents and humans after evidence inspection. An empty `capabilities` list causes `audit` to report `no-knowledge-routes`.
+
+## Antigravity preflight mode
+
+`antigravity_preflight` is toolkit-generated installation metadata, not shared policy. `observe` is the default and only injects the lifecycle context. `strict` adds the toolkit-managed Antigravity `PreToolUse` gate and requires the agent to activate its pending preflight with selected documentation routes before repository-local discovery or mutation tools run. Updates retain the recorded mode unless an explicit installation flag changes it.
 
 ## Capabilities
 

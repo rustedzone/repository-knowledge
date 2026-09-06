@@ -27,6 +27,7 @@ Read when:
 Knowledge:
 - [Installation](installation.md)
 - [Testing](testing.md)
+- [Strict Antigravity preflight TDD evidence](testing/strict-antigravity-preflight.tdd.md)
 
 Evidence anchors:
 - `internal/toolkit/install.go`

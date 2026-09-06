@@ -104,6 +104,26 @@ Installation also registers a native repository preflight hook for each selected
 
 The installer merges only its exact `repo-knowledge hook-context` entry. Existing setting values and consumer hooks are preserved, and switching adapters removes only the obsolete toolkit entry. Invalid existing JSON stops installation rather than overwriting the file.
 
+Antigravity uses observational preflight by default. Enable tool-level repository preflight enforcement explicitly:
+
+```bash
+repo-knowledge install \
+  --target /path/to/service-repository \
+  --agent antigravity-ide \
+  --antigravity-preflight strict
+```
+
+Strict mode adds a managed `PreToolUse` entry alongside `PreInvocation`. The first hook invocation injects an opaque activation token. Before activation, the gate permits only Repository Knowledge and routed-documentation reads plus the exact activation command; it denies repository discovery, commands, writes, and subagents. The agent activates after selecting documentation routes, for example:
+
+```bash
+repo-knowledge preflight-activate \
+  --token <injected-token> \
+  --route docs/index.md \
+  --route docs/architecture.md
+```
+
+`update` keeps the existing mode when the flag is omitted. Use `--antigravity-preflight observe` to remove only the toolkit-managed gate and return to injection-only behavior.
+
 The hook command requires `repo-knowledge` to resolve on the host process's `PATH`. Review and trust the new project hook when the agent asks; do not bypass the host's trust boundary. Start a new session after installation. Cursor normally reloads a saved hook file, but restarting the host is the reliable fallback. If a hook cannot run, the native project rule still requires a manual preflight and the agent should not silently install a missing binary. Permission-gated binary recovery applies only when the current task actually needs a CLI operation.
 
 Then:
@@ -114,7 +134,7 @@ repo-knowledge scan --target /path/to/service-repository
 repo-knowledge rebuild --target /path/to/service-repository
 ```
 
-`doctor` checks the rule, skill, managed-file digests, and native hook registration for every selected adapter. In a new repository task, the agent's first progress update should include `Repository knowledge preflight: loaded` and the selected documentation routes. That receipt is the user-visible confirmation that activation happened; native hooks remain a guardrail rather than an absolute enforcement mechanism.
+`doctor` checks the rule, skill, managed-file digests, and native hook registration for every selected adapter. In strict Antigravity mode it also requires the managed gate registration. `repo-knowledge doctor --live-hooks` additionally performs an in-process pending → activation → active gate self-test; it verifies toolkit behavior but cannot prove that Antigravity trusted or invoked the configured hook. In a new repository task, the agent's first progress update should include `Repository knowledge preflight: loaded` and the selected documentation routes. That receipt is the user-visible confirmation that activation happened; native hooks remain a guardrail rather than proof of model understanding.
 
 `scan` and `rebuild` produce structural discovery artifacts, not human-readable repository documentation. To generate documentation, ask the installed agent to classify every repository shape, inspect evidence across all material surfaces, write detailed profile-specific guides, populate `docs/index.md`, and record verified capability routes. For example:
 

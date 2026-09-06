@@ -87,7 +87,11 @@ func Install(options InstallOptions) (InstallResult, error) {
 	if options.Update && !options.AllowDowngrade && compareVersions(repositoryknowledge.Version(), oldManifest.ToolkitVersion) < 0 {
 		return result, fmt.Errorf("refusing to downgrade toolkit from %s to %s without --allow-downgrade", oldManifest.ToolkitVersion, repositoryknowledge.Version())
 	}
-	hookRegistrations, hookMutations, err := prepareAgentHooks(target, oldManifest.AgentAdapters, options.AgentAdapters, options.Update)
+	options.AntigravityPreflight, err = resolveAntigravityPreflight(options, oldManifest)
+	if err != nil {
+		return result, err
+	}
+	hookRegistrations, hookMutations, err := prepareAgentHooks(target, oldManifest.AgentAdapters, options.AgentAdapters, options.Update, options.AntigravityPreflight)
 	if err != nil {
 		return result, err
 	}
@@ -131,13 +135,14 @@ func Install(options InstallOptions) (InstallResult, error) {
 		managedFiles = append(managedFiles, ManagedFile{Path: relative, SHA256: digest})
 	}
 	manifest := ToolkitManifest{
-		SchemaVersion:  "1.0",
-		ToolkitVersion: repositoryknowledge.Version(),
-		Source:         options.Source,
-		Ref:            options.Ref,
-		InstalledAt:    utcNow(),
-		AgentAdapters:  append([]string(nil), options.AgentAdapters...),
-		ManagedFiles:   managedFiles,
+		SchemaVersion:        "1.0",
+		ToolkitVersion:       repositoryknowledge.Version(),
+		Source:               options.Source,
+		Ref:                  options.Ref,
+		InstalledAt:          utcNow(),
+		AgentAdapters:        append([]string(nil), options.AgentAdapters...),
+		AntigravityPreflight: options.AntigravityPreflight,
+		ManagedFiles:         managedFiles,
 		Ownership: map[string]string{
 			"managed_files":                  "replaced by repo-knowledge update",
 			"managed_codex_agents_block":     "replaced in place; other AGENTS.md content is preserved",
@@ -163,6 +168,23 @@ func Install(options InstallOptions) (InstallResult, error) {
 		ModifiedObsoleteFilesPreserved: preserved,
 		AgentHookRegistrations:         hookRegistrations,
 	}, nil
+}
+
+func resolveAntigravityPreflight(options InstallOptions, old ToolkitManifest) (string, error) {
+	mode := strings.TrimSpace(options.AntigravityPreflight)
+	if mode == "" && options.Update {
+		mode = old.AntigravityPreflight
+	}
+	if mode == "" {
+		mode = AntigravityPreflightObserve
+	}
+	if mode != AntigravityPreflightObserve && mode != AntigravityPreflightStrict {
+		return "", fmt.Errorf("antigravity preflight mode must be %q or %q", AntigravityPreflightObserve, AntigravityPreflightStrict)
+	}
+	if mode == AntigravityPreflightStrict && !contains(options.AgentAdapters, agentAntigravityIDE) {
+		return "", fmt.Errorf("antigravity strict preflight requires the antigravity-ide adapter")
+	}
+	return mode, nil
 }
 
 func readOptionalManifest(path string) (ToolkitManifest, bool, error) {

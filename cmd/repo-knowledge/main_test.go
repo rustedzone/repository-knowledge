@@ -89,6 +89,31 @@ func TestRunInstallAllAgents(t *testing.T) {
 	}
 }
 
+func TestRunInstallStrictAntigravityPreflightAndDoctorLiveHooks(t *testing.T) {
+	root := t.TempDir()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{
+		"install", "--target", root, "--agent", "antigravity-ide", "--antigravity-preflight", "strict",
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("run(strict install) code = %d, stderr = %q", code, stderr.String())
+	}
+	data, err := os.ReadFile(filepath.Join(root, ".agents", "hooks.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "preflight-gate --agent antigravity-ide") {
+		t.Fatalf("strict install did not register preflight gate: %s", data)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	code = run([]string{"doctor", "--target", root, "--live-hooks"}, &stdout, &stderr)
+	if code != 0 || !strings.Contains(stdout.String(), "preflight-gate-self-test") {
+		t.Fatalf("run(doctor --live-hooks) code = %d, stdout = %q, stderr = %q", code, stdout.String(), stderr.String())
+	}
+}
+
 func TestRunHookContextUsesAgentProtocol(t *testing.T) {
 	root := t.TempDir()
 	var stdout bytes.Buffer

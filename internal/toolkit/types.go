@@ -11,25 +11,32 @@ type ManagedFile struct {
 }
 
 type ToolkitManifest struct {
-	SchemaVersion  string            `json:"schema_version"`
-	ToolkitVersion string            `json:"toolkit_version"`
-	Source         string            `json:"source"`
-	Ref            string            `json:"ref"`
-	InstalledAt    string            `json:"installed_at"`
-	AgentAdapters  []string          `json:"agent_adapters"`
-	ManagedFiles   []ManagedFile     `json:"managed_files"`
-	Ownership      map[string]string `json:"ownership"`
+	SchemaVersion        string            `json:"schema_version"`
+	ToolkitVersion       string            `json:"toolkit_version"`
+	Source               string            `json:"source"`
+	Ref                  string            `json:"ref"`
+	InstalledAt          string            `json:"installed_at"`
+	AgentAdapters        []string          `json:"agent_adapters"`
+	AntigravityPreflight string            `json:"antigravity_preflight,omitempty"`
+	ManagedFiles         []ManagedFile     `json:"managed_files"`
+	Ownership            map[string]string `json:"ownership"`
 }
 
 type InstallOptions struct {
-	Target           string
-	Source           string
-	Ref              string
-	AgentAdapters    []string
-	AllAgentAdapters bool
-	Update           bool
-	AllowDowngrade   bool
+	Target               string
+	Source               string
+	Ref                  string
+	AgentAdapters        []string
+	AllAgentAdapters     bool
+	Update               bool
+	AllowDowngrade       bool
+	AntigravityPreflight string
 }
+
+const (
+	AntigravityPreflightObserve = "observe"
+	AntigravityPreflightStrict  = "strict"
+)
 
 type InstallResult struct {
 	Action                         string   `json:"action"`
@@ -126,6 +133,20 @@ type Check struct {
 type DoctorReport struct {
 	Status string  `json:"status"`
 	Checks []Check `json:"checks"`
+}
+
+type PreflightActivationResult struct {
+	Status string   `json:"status"`
+	Root   string   `json:"root"`
+	Routes []string `json:"routes"`
+}
+
+type PreflightGateResult struct {
+	Agent    string `json:"agent"`
+	Root     string `json:"root"`
+	Decision string `json:"decision"`
+	Reason   string `json:"reason,omitempty"`
+	Output   string `json:"-"`
 }
 
 type AuditFinding struct {

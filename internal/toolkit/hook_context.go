@@ -32,57 +32,66 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 		return HookContextResult{}, err
 	}
 
-	switch agent {
-	case agentCodex, agentClaudeCode:
-		return HookContextResult{Agent: agent, Root: root, Output: context}, nil
-	case agentCursor:
-		output, err := json.Marshal(map[string]string{"additional_context": context})
-		if err != nil {
-			return HookContextResult{}, fmt.Errorf("encode Cursor hook context: %w", err)
-		}
-		return HookContextResult{Agent: agent, Root: root, Output: string(output)}, nil
-	case agentAntigravityIDE:
-		event, err := parseAntigravityHookEvent(input)
-		if err != nil {
-			return HookContextResult{}, err
-		}
-		manifest, _, err := readOptionalManifest(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
+	if agent != agentCodex && agent != agentClaudeCode && agent != agentCursor && agent != agentAntigravityIDE {
+		return HookContextResult{}, fmt.Errorf("unsupported hook agent %q", agent)
+	}
+	manifest, _, err := readOptionalManifest(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
+	if err != nil {
+		return HookContextResult{}, err
+	}
+	if agent == agentAntigravityIDE {
+		event, err := parsePreflightHookEvent(agent, input)
 		if err != nil {
 			return HookContextResult{}, err
 		}
 		if event.InvocationNum > 0 {
 			context = antigravityReminder
 		}
-		if manifest.AntigravityPreflight == AntigravityPreflightStrict {
-			session, err := startOrResumePreflight(root, event.ConversationID)
+		if preflightMode(manifest, agent) == AntigravityPreflightStrict {
+			session, err := startOrResumePreflight(root, agent, event.ConversationID)
 			if err != nil {
 				return HookContextResult{}, err
 			}
 			context += "\n\n" + strictPreflightContext(session)
 		}
-		output, err := json.Marshal(map[string]any{
-			"injectSteps": []map[string]string{{"ephemeralMessage": context}},
-		})
+		output, err := json.Marshal(map[string]any{"injectSteps": []map[string]string{{"ephemeralMessage": context}}})
 		if err != nil {
 			return HookContextResult{}, fmt.Errorf("encode Antigravity hook context: %w", err)
 		}
 		return HookContextResult{Agent: agent, Root: root, Output: string(output)}, nil
-	default:
-		return HookContextResult{}, fmt.Errorf("unsupported hook agent %q", agent)
 	}
+	if preflightMode(manifest, agent) == AntigravityPreflightStrict {
+		event, err := parsePreflightHookEvent(agent, input)
+		if err != nil {
+			return HookContextResult{}, err
+		}
+		session, err := startOrResumePreflight(root, agent, event.ConversationID)
+		if err != nil {
+			return HookContextResult{}, err
+		}
+		context += "\n\n" + strictPreflightContext(session)
+	}
+	if agent == agentCursor {
+		output, err := json.Marshal(map[string]string{"additional_context": context})
+		if err != nil {
+			return HookContextResult{}, fmt.Errorf("encode Cursor hook context: %w", err)
+		}
+		return HookContextResult{Agent: agent, Root: root, Output: string(output)}, nil
+	}
+	return HookContextResult{Agent: agent, Root: root, Output: context}, nil
 }
 
 func strictPreflightContext(session preflightSession) string {
 	if session.Active {
 		return strings.Join([]string{
-			"# Antigravity strict preflight",
+			"# Repository Knowledge strict preflight",
 			"",
 			"status: active",
 			"Repository Knowledge is active for this conversation. Repository discovery and changes are permitted until the preflight session expires or its knowledge inputs change.",
 		}, "\n")
 	}
 	return strings.Join([]string{
-		"# Antigravity strict preflight",
+		"# Repository Knowledge strict preflight",
 		"",
 		"status: pending",
 		"Repository tools are blocked until preflight activation. Read the installed skill, contract, repository configuration, documentation index, and the relevant documentation route first.",

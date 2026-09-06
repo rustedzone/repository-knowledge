@@ -45,33 +45,28 @@ func Doctor(root string) (DoctorReport, error) {
 		add("codex-entry-contract", strings.Contains(string(agentsData), ManagedBegin), "managed AGENTS.md block")
 		ok, detail := hasAgentHookRegistration(root, agentCodex)
 		add("codex-preflight-hook", ok, detail)
+		addPreflightHealthCheck(add, manifest, root, agentCodex)
 	}
 	if contains(adapters, agentClaudeCode) {
 		add("claude-code-skill", regularFile(filepath.Join(root, ".claude", "skills", "repository-knowledge", "SKILL.md")), ".claude/skills/repository-knowledge/SKILL.md")
 		add("claude-code-entry-contract", regularFile(filepath.Join(root, ".claude", "rules", "repository-knowledge.md")), ".claude/rules/repository-knowledge.md")
 		ok, detail := hasAgentHookRegistration(root, agentClaudeCode)
 		add("claude-code-preflight-hook", ok, detail)
+		addPreflightHealthCheck(add, manifest, root, agentClaudeCode)
 	}
 	if contains(adapters, agentAntigravityIDE) {
 		add("antigravity-ide-skill", regularFile(filepath.Join(root, ".agents", "skills", "repository-knowledge", "SKILL.md")), ".agents/skills/repository-knowledge/SKILL.md")
 		add("antigravity-ide-entry-contract", regularFile(filepath.Join(root, ".agents", "rules", "repository-knowledge.md")), ".agents/rules/repository-knowledge.md")
 		ok, detail := hasAgentHookRegistration(root, agentAntigravityIDE)
 		add("antigravity-ide-preflight-hook", ok, detail)
-		mode := manifest.AntigravityPreflight
-		if mode == "" {
-			mode = AntigravityPreflightObserve
-		}
-		add("antigravity-ide-preflight-mode", mode == AntigravityPreflightObserve || mode == AntigravityPreflightStrict, mode)
-		if mode == AntigravityPreflightStrict {
-			ok, detail := hasAntigravityGateRegistration(root)
-			add("antigravity-ide-preflight-gate", ok, detail)
-		}
+		addPreflightHealthCheck(add, manifest, root, agentAntigravityIDE)
 	}
 	if contains(adapters, agentCursor) {
 		add("cursor-skill", regularFile(filepath.Join(root, ".cursor", "skills", "repository-knowledge", "SKILL.md")), ".cursor/skills/repository-knowledge/SKILL.md")
 		add("cursor-entry-contract", regularFile(filepath.Join(root, ".cursor", "rules", "repository-knowledge.mdc")), ".cursor/rules/repository-knowledge.mdc")
 		ok, detail := hasAgentHookRegistration(root, agentCursor)
 		add("cursor-preflight-hook", ok, detail)
+		addPreflightHealthCheck(add, manifest, root, agentCursor)
 	}
 
 	configPath := filepath.Join(root, ".repo-knowledge", "repository.json")
@@ -119,7 +114,16 @@ func Doctor(root string) (DoctorReport, error) {
 	return DoctorReport{Status: status, Checks: checks}, nil
 }
 
-// DoctorLive adds an in-process strict Antigravity gate check. It validates the
+func addPreflightHealthCheck(add func(string, bool, string), manifest ToolkitManifest, root, agent string) {
+	mode := preflightMode(manifest, agent)
+	add(agent+"-preflight-mode", mode == AntigravityPreflightObserve || mode == AntigravityPreflightStrict, mode)
+	if mode == AntigravityPreflightStrict {
+		ok, detail := hasPreflightGateRegistration(root, agent)
+		add(agent+"-preflight-gate", ok, detail)
+	}
+}
+
+// DoctorLive adds in-process strict gate checks. They validate the
 // installed gate behavior but cannot establish that an external host trusted or
 // invoked its configured hooks.
 func DoctorLive(root string) (DoctorReport, error) {
@@ -128,33 +132,38 @@ func DoctorLive(root string) (DoctorReport, error) {
 		return DoctorReport{}, err
 	}
 	manifest, exists, err := readOptionalManifest(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
-	if err != nil || !exists || !contains(manifest.AgentAdapters, agentAntigravityIDE) || manifest.AntigravityPreflight != AntigravityPreflightStrict {
+	if err != nil || !exists {
 		return report, err
 	}
-	ok, detail := strictAntigravityGateSelfTest(root)
-	report.Checks = append(report.Checks, Check{ID: "antigravity-ide-preflight-gate-self-test", OK: ok, Detail: detail})
-	if !ok {
-		report.Status = "fail"
+	for _, agent := range manifest.AgentAdapters {
+		if preflightMode(manifest, agent) != AntigravityPreflightStrict {
+			continue
+		}
+		ok, detail := strictPreflightGateSelfTest(root, agent)
+		report.Checks = append(report.Checks, Check{ID: agent + "-preflight-gate-self-test", OK: ok, Detail: detail})
+		if !ok {
+			report.Status = "fail"
+		}
 	}
 	return report, nil
 }
 
-func strictAntigravityGateSelfTest(root string) (bool, string) {
+func strictPreflightGateSelfTest(root, agent string) (bool, string) {
 	token, err := newPreflightToken()
 	if err != nil {
 		return false, err.Error()
 	}
 	conversation := "doctor-" + token[:16]
-	statePath, err := preflightSessionPath(root, conversation)
+	statePath, err := preflightSessionPath(root, agent, conversation)
 	if err != nil {
 		return false, err.Error()
 	}
 	defer func() { _ = os.Remove(statePath) }()
-	if _, err := startOrResumePreflight(root, conversation); err != nil {
+	if _, err := startOrResumePreflight(root, agent, conversation); err != nil {
 		return false, err.Error()
 	}
-	pendingInput := strings.NewReader(`{"conversationId":"` + conversation + `","toolCall":{"name":"grep_search","arguments":{"query":"preflight","path":"internal"}}}`)
-	pending, err := PreflightGate(root, agentAntigravityIDE, pendingInput)
+	pendingInput := strictPreflightSelfTestInput(agent, conversation)
+	pending, err := PreflightGate(root, agent, pendingInput)
 	if err != nil || pending.Decision != "deny" {
 		if err != nil {
 			return false, err.Error()
@@ -172,8 +181,8 @@ func strictAntigravityGateSelfTest(root string) (bool, string) {
 	if _, err := PreflightActivate(root, session.Token, []string{config.Documentation.Index}); err != nil {
 		return false, err.Error()
 	}
-	activeInput := strings.NewReader(`{"conversationId":"` + conversation + `","toolCall":{"name":"grep_search","arguments":{"query":"preflight","path":"internal"}}}`)
-	active, err := PreflightGate(root, agentAntigravityIDE, activeInput)
+	activeInput := strictPreflightSelfTestInput(agent, conversation)
+	active, err := PreflightGate(root, agent, activeInput)
 	if err != nil || active.Decision != "allow" {
 		if err != nil {
 			return false, err.Error()
@@ -183,14 +192,15 @@ func strictAntigravityGateSelfTest(root string) (bool, string) {
 	return true, "pending discovery denied; activation enabled discovery"
 }
 
-func hasAntigravityGateRegistration(root string) (bool, string) {
-	relative := hookConfigPaths[agentAntigravityIDE]
-	config, _, err := readHookConfig(filepath.Join(root, filepath.FromSlash(relative)))
-	if err != nil {
-		return false, err.Error()
+func strictPreflightSelfTestInput(agent, conversation string) *strings.Reader {
+	switch agent {
+	case agentAntigravityIDE:
+		return strings.NewReader(`{"conversationId":"` + conversation + `","toolCall":{"name":"grep_search","arguments":{"query":"preflight","path":"internal"}}}`)
+	case agentCursor:
+		return strings.NewReader(`{"conversation_id":"` + conversation + `","tool_name":"Read","tool_input":{"path":"internal/toolkit/preflight.go"}}`)
+	default:
+		return strings.NewReader(`{"session_id":"` + conversation + `","tool_name":"Bash","tool_input":{"command":"git status"}}`)
 	}
-	value, ok := config[antigravityHookKey]
-	return ok && containsHookCommand(value, managedPreflightGateCommand(agentAntigravityIDE)), relative
 }
 
 func Audit(root, base, head string) (AuditReport, error) {

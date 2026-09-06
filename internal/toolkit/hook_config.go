@@ -25,7 +25,7 @@ type hookConfigMutation struct {
 	existed bool
 }
 
-func prepareAgentHooks(target string, oldAdapters, adapters []string, update bool, antigravityPreflight string) ([]string, []hookConfigMutation, error) {
+func prepareAgentHooks(target string, oldAdapters, adapters []string, update bool, preflightModes map[string]string) ([]string, []hookConfigMutation, error) {
 	registrations := make([]string, 0, len(adapters))
 	mutations := make([]hookConfigMutation, 0, len(adapters))
 	for _, agent := range supportedAgentAdapters {
@@ -33,7 +33,7 @@ func prepareAgentHooks(target string, oldAdapters, adapters []string, update boo
 		if !enabled && (!update || !contains(oldAdapters, agent)) {
 			continue
 		}
-		mutation, err := prepareAgentHookMutation(target, agent, enabled, antigravityPreflight)
+		mutation, err := prepareAgentHookMutation(target, agent, enabled, preflightModes[agent])
 		if err != nil {
 			return nil, nil, err
 		}
@@ -55,7 +55,7 @@ func applyAgentHooks(mutations []hookConfigMutation) error {
 	return nil
 }
 
-func prepareAgentHookMutation(target, agent string, enabled bool, antigravityPreflight string) (hookConfigMutation, error) {
+func prepareAgentHookMutation(target, agent string, enabled bool, preflightMode string) (hookConfigMutation, error) {
 	relative := hookConfigPaths[agent]
 	path, err := repositoryPath(target, relative, "agent hook configuration")
 	if err != nil {
@@ -85,6 +85,9 @@ func prepareAgentHookMutation(target, agent string, enabled bool, antigravityPre
 				"additionalContextLimit": float64(65536),
 			}},
 		})
+		if err == nil {
+			err = reconcileMatcherHook(config, "PreToolUse", managedPreflightGateCommand(agent), preflightMode == AntigravityPreflightStrict, preflightGateMatcherHook(agent))
+		}
 	case agentClaudeCode:
 		err = reconcileMatcherHook(config, "SessionStart", managedHookCommand(agent), true, map[string]any{
 			"matcher": "startup|resume|clear|compact|fork",
@@ -94,10 +97,13 @@ func prepareAgentHookMutation(target, agent string, enabled bool, antigravityPre
 				"timeout": float64(10),
 			}},
 		})
+		if err == nil {
+			err = reconcileMatcherHook(config, "PreToolUse", managedPreflightGateCommand(agent), preflightMode == AntigravityPreflightStrict, preflightGateMatcherHook(agent))
+		}
 	case agentAntigravityIDE:
-		err = reconcileAntigravityHook(config, true, antigravityPreflight == AntigravityPreflightStrict)
+		err = reconcileAntigravityHook(config, true, preflightMode == AntigravityPreflightStrict)
 	case agentCursor:
-		err = reconcileCursorHook(config, true)
+		err = reconcileCursorHook(config, true, preflightMode == AntigravityPreflightStrict)
 	default:
 		err = fmt.Errorf("unsupported agent hook adapter %q", agent)
 	}
@@ -110,14 +116,21 @@ func prepareAgentHookMutation(target, agent string, enabled bool, antigravityPre
 func removeAgentHookFromConfig(config map[string]any, agent string) error {
 	switch agent {
 	case agentCodex, agentClaudeCode:
-		return reconcileMatcherHook(config, "SessionStart", managedHookCommand(agent), false, nil)
+		if err := reconcileMatcherHook(config, "SessionStart", managedHookCommand(agent), false, nil); err != nil {
+			return err
+		}
+		return reconcileMatcherHook(config, "PreToolUse", managedPreflightGateCommand(agent), false, nil)
 	case agentAntigravityIDE:
 		return reconcileAntigravityHook(config, false, false)
 	case agentCursor:
-		return reconcileCursorHook(config, false)
+		return reconcileCursorHook(config, false, false)
 	default:
 		return fmt.Errorf("unsupported agent hook adapter %q", agent)
 	}
+}
+
+func preflightGateMatcherHook(agent string) map[string]any {
+	return map[string]any{"matcher": ".*", "hooks": []any{map[string]any{"type": "command", "command": managedPreflightGateCommand(agent), "timeout": float64(10), "statusMessage": "Checking repository knowledge preflight"}}}
 }
 
 func managedHookCommand(agent string) string {
@@ -227,7 +240,7 @@ func reconcileAntigravityHook(config map[string]any, enabled, strict bool) error
 	return nil
 }
 
-func reconcileCursorHook(config map[string]any, enabled bool) error {
+func reconcileCursorHook(config map[string]any, enabled, strict bool) error {
 	if version, ok := config["version"]; ok && version != float64(1) {
 		return fmt.Errorf("unsupported Cursor hooks version %v", version)
 	}
@@ -238,30 +251,42 @@ func reconcileCursorHook(config map[string]any, enabled bool) error {
 	if hooks == nil {
 		return nil
 	}
-	entries, err := arrayField(hooks, "sessionStart")
-	if err != nil {
+	if err := reconcileCursorEvent(hooks, "sessionStart", managedHookCommand(agentCursor), enabled, map[string]any{"command": managedHookCommand(agentCursor)}); err != nil {
 		return err
 	}
-	filtered := make([]any, 0, len(entries)+1)
-	for _, entry := range entries {
-		if hookCommand(entry) != managedHookCommand(agentCursor) {
-			filtered = append(filtered, entry)
-		}
+	if err := reconcileCursorEvent(hooks, "preToolUse", managedPreflightGateCommand(agentCursor), enabled && strict, map[string]any{"command": managedPreflightGateCommand(agentCursor), "matcher": ".*"}); err != nil {
+		return err
 	}
 	if enabled {
-		filtered = append(filtered, map[string]any{"command": managedHookCommand(agentCursor)})
 		config["version"] = float64(1)
-	}
-	if len(filtered) == 0 {
-		delete(hooks, "sessionStart")
-	} else {
-		hooks["sessionStart"] = filtered
 	}
 	if len(hooks) == 0 {
 		delete(config, "hooks")
 	}
 	if !enabled && len(config) == 1 && config["version"] == float64(1) {
 		delete(config, "version")
+	}
+	return nil
+}
+
+func reconcileCursorEvent(hooks map[string]any, event, command string, enabled bool, canonical map[string]any) error {
+	entries, err := arrayField(hooks, event)
+	if err != nil {
+		return err
+	}
+	filtered := make([]any, 0, len(entries)+1)
+	for _, entry := range entries {
+		if hookCommand(entry) != command {
+			filtered = append(filtered, entry)
+		}
+	}
+	if enabled {
+		filtered = append(filtered, canonical)
+	}
+	if len(filtered) == 0 {
+		delete(hooks, event)
+	} else {
+		hooks[event] = filtered
 	}
 	return nil
 }
@@ -281,6 +306,29 @@ func objectField(parent map[string]any, name string, create bool) (map[string]an
 		return nil, fmt.Errorf("%s must be a JSON object", name)
 	}
 	return object, nil
+}
+
+func hasPreflightGateRegistration(root, agent string) (bool, string) {
+	relative := hookConfigPaths[agent]
+	config, _, err := readHookConfig(filepath.Join(root, filepath.FromSlash(relative)))
+	if err != nil {
+		return false, err.Error()
+	}
+	command := managedPreflightGateCommand(agent)
+	switch agent {
+	case agentCodex, agentClaudeCode:
+		hooks, _ := config["hooks"].(map[string]any)
+		entries, _ := hooks["PreToolUse"].([]any)
+		return containsHookCommand(entries, command), relative
+	case agentAntigravityIDE:
+		value, ok := config[antigravityHookKey]
+		return ok && containsHookCommand(value, command), relative
+	case agentCursor:
+		hooks, _ := config["hooks"].(map[string]any)
+		entries, _ := hooks["preToolUse"].([]any)
+		return containsHookCommand(entries, command), relative
+	}
+	return false, relative
 }
 
 func arrayField(parent map[string]any, name string) ([]any, error) {

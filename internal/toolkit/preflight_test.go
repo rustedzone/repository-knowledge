@@ -301,9 +301,14 @@ func activationToken(t *testing.T, output string) string {
 	if err := json.Unmarshal([]byte(output), &body); err != nil || len(body.InjectSteps) != 1 {
 		t.Fatalf("parse hook output %q: %v", output, err)
 	}
-	match := regexp.MustCompile(`--token ([a-f0-9]+)`).FindStringSubmatch(body.InjectSteps[0].EphemeralMessage)
+	return preflightTokenFromText(t, body.InjectSteps[0].EphemeralMessage)
+}
+
+func preflightTokenFromText(t *testing.T, text string) string {
+	t.Helper()
+	match := regexp.MustCompile(`--token ([a-f0-9]+)`).FindStringSubmatch(text)
 	if len(match) != 2 {
-		t.Fatalf("no activation token in hook output: %s", body.InjectSteps[0].EphemeralMessage)
+		t.Fatalf("no activation token in hook output: %s", text)
 	}
 	return match[1]
 }

@@ -17,6 +17,7 @@ type ToolkitManifest struct {
 	Ref                  string            `json:"ref"`
 	InstalledAt          string            `json:"installed_at"`
 	AgentAdapters        []string          `json:"agent_adapters"`
+	PreflightModes       map[string]string `json:"preflight_modes,omitempty"`
 	AntigravityPreflight string            `json:"antigravity_preflight,omitempty"`
 	ManagedFiles         []ManagedFile     `json:"managed_files"`
 	Ownership            map[string]string `json:"ownership"`
@@ -30,6 +31,8 @@ type InstallOptions struct {
 	AllAgentAdapters     bool
 	Update               bool
 	AllowDowngrade       bool
+	PreflightModes       map[string]string
+	AgentPreflight       []string
 	AntigravityPreflight string
 }
 

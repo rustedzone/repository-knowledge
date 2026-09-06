@@ -87,11 +87,12 @@ func Install(options InstallOptions) (InstallResult, error) {
 	if options.Update && !options.AllowDowngrade && compareVersions(repositoryknowledge.Version(), oldManifest.ToolkitVersion) < 0 {
 		return result, fmt.Errorf("refusing to downgrade toolkit from %s to %s without --allow-downgrade", oldManifest.ToolkitVersion, repositoryknowledge.Version())
 	}
-	options.AntigravityPreflight, err = resolveAntigravityPreflight(options, oldManifest)
+	options.PreflightModes, err = resolvePreflightModes(options, oldManifest)
 	if err != nil {
 		return result, err
 	}
-	hookRegistrations, hookMutations, err := prepareAgentHooks(target, oldManifest.AgentAdapters, options.AgentAdapters, options.Update, options.AntigravityPreflight)
+	options.AntigravityPreflight = options.PreflightModes[agentAntigravityIDE]
+	hookRegistrations, hookMutations, err := prepareAgentHooks(target, oldManifest.AgentAdapters, options.AgentAdapters, options.Update, options.PreflightModes)
 	if err != nil {
 		return result, err
 	}
@@ -141,6 +142,7 @@ func Install(options InstallOptions) (InstallResult, error) {
 		Ref:                  options.Ref,
 		InstalledAt:          utcNow(),
 		AgentAdapters:        append([]string(nil), options.AgentAdapters...),
+		PreflightModes:       options.PreflightModes,
 		AntigravityPreflight: options.AntigravityPreflight,
 		ManagedFiles:         managedFiles,
 		Ownership: map[string]string{
@@ -170,21 +172,67 @@ func Install(options InstallOptions) (InstallResult, error) {
 	}, nil
 }
 
-func resolveAntigravityPreflight(options InstallOptions, old ToolkitManifest) (string, error) {
-	mode := strings.TrimSpace(options.AntigravityPreflight)
-	if mode == "" && options.Update {
-		mode = old.AntigravityPreflight
+func resolvePreflightModes(options InstallOptions, old ToolkitManifest) (map[string]string, error) {
+	modes := make(map[string]string, len(options.AgentAdapters))
+	for _, agent := range options.AgentAdapters {
+		modes[agent] = AntigravityPreflightObserve
+		if options.Update {
+			if oldMode := old.PreflightModes[agent]; oldMode != "" {
+				modes[agent] = oldMode
+			} else if agent == agentAntigravityIDE && old.AntigravityPreflight != "" {
+				modes[agent] = old.AntigravityPreflight
+			}
+		}
 	}
-	if mode == "" {
-		mode = AntigravityPreflightObserve
+	for agent, mode := range options.PreflightModes {
+		canonical, err := normalizeAgentAdapters([]string{agent})
+		if err != nil {
+			return nil, err
+		}
+		if !contains(options.AgentAdapters, canonical[0]) {
+			return nil, fmt.Errorf("strict preflight requires the %s adapter", canonical[0])
+		}
+		modes[canonical[0]] = strings.TrimSpace(mode)
 	}
-	if mode != AntigravityPreflightObserve && mode != AntigravityPreflightStrict {
-		return "", fmt.Errorf("antigravity preflight mode must be %q or %q", AntigravityPreflightObserve, AntigravityPreflightStrict)
+	for _, assignment := range options.AgentPreflight {
+		parts := strings.SplitN(assignment, "=", 2)
+		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" || strings.TrimSpace(parts[1]) == "" {
+			return nil, fmt.Errorf("--agent-preflight must be AGENT=observe or AGENT=strict")
+		}
+		canonical, err := normalizeAgentAdapters([]string{parts[0]})
+		if err != nil {
+			return nil, err
+		}
+		if !contains(options.AgentAdapters, canonical[0]) {
+			return nil, fmt.Errorf("strict preflight requires the %s adapter", canonical[0])
+		}
+		modes[canonical[0]] = strings.TrimSpace(parts[1])
 	}
-	if mode == AntigravityPreflightStrict && !contains(options.AgentAdapters, agentAntigravityIDE) {
-		return "", fmt.Errorf("antigravity strict preflight requires the antigravity-ide adapter")
+	if mode := strings.TrimSpace(options.AntigravityPreflight); mode != "" {
+		if !contains(options.AgentAdapters, agentAntigravityIDE) {
+			return nil, fmt.Errorf("antigravity strict preflight requires the antigravity-ide adapter")
+		}
+		if existing, ok := options.PreflightModes[agentAntigravityIDE]; ok && existing != mode {
+			return nil, fmt.Errorf("conflicting preflight modes for antigravity-ide")
+		}
+		modes[agentAntigravityIDE] = mode
 	}
-	return mode, nil
+	for agent, mode := range modes {
+		if mode != AntigravityPreflightObserve && mode != AntigravityPreflightStrict {
+			return nil, fmt.Errorf("%s preflight mode must be %q or %q", agent, AntigravityPreflightObserve, AntigravityPreflightStrict)
+		}
+	}
+	return modes, nil
+}
+
+func preflightMode(manifest ToolkitManifest, agent string) string {
+	if mode := manifest.PreflightModes[agent]; mode != "" {
+		return mode
+	}
+	if agent == agentAntigravityIDE && manifest.AntigravityPreflight != "" {
+		return manifest.AntigravityPreflight
+	}
+	return AntigravityPreflightObserve
 }
 
 func readOptionalManifest(path string) (ToolkitManifest, bool, error) {

@@ -2,6 +2,18 @@
 
 All notable changes follow Keep a Changelog. Versions follow Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- Workflow-security regression coverage that rejects mutable action tags, branches, short commit references, and mutable Docker tags across every GitHub Actions workflow.
+- Go 1.22.0 and Go 1.25.14 compatibility jobs that run ordinary checks and build both CLIs, with race tests isolated to Go 1.25.14.
+
+### Changed
+
+- GitHub Actions dependencies are pinned to verified full commit SHAs with exact release comments.
+- Tag releases now verify and build with read-only repository access, transfer the release set through pinned artifact actions, and grant write, identity-token, and attestation permissions only to the dependent publishing job.
+
 ## [0.9.0] - 2026-09-06
 
 ### Added

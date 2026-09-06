@@ -12,6 +12,20 @@ This runs all Go tests, `go vet`, and `gofmt` verification. To build every relea
 make release
 ```
 
+GitHub CI treats the declared minimum and the release toolchain as separate compatibility targets. Go 1.22.0 and Go 1.25.14 each run `make check` and build both `repo-knowledge` and `repo-knowledge-eval`; race-enabled tests run once on Go 1.25.14. To reproduce the minimum-version checks with Go's toolchain selection:
+
+```bash
+GOTOOLCHAIN=go1.22.0 make check
+GOTOOLCHAIN=go1.22.0 make build
+GOTOOLCHAIN=go1.22.0 go build -trimpath -o /tmp/repo-knowledge-eval ./cmd/repo-knowledge-eval
+```
+
+`workflow_security_test.go` examines every YAML workflow in `.github/workflows/`. External actions must use a full 40-character commit SHA, Docker actions must use a SHA-256 digest, and local actions may use a repository-relative path. The focused regression includes a deliberately mutable `actions/checkout@v6` fixture and must reject it:
+
+```bash
+go test -run TestImmutableUsesValidationRejectsMutableReferences ./...
+```
+
 ## Prompt-driven agent evaluation
 
 List the isolated evaluation cases:
@@ -90,4 +104,4 @@ git -C "${TARGET_REPOSITORY}" init
 
 Before tagging, ensure `VERSION`, the adapter package version, documentation examples, and changelog agree.
 
-For a GitHub tag, also confirm the release workflow used the pinned patched Go toolchain, attached every file listed in `SHA256SUMS` including `repo-knowledge-github-adapter.sh` and `LICENSE`, and produced a verifiable artifact attestation. Enable private vulnerability reporting, secret scanning, and push protection in the public repository settings before accepting contributions.
+For a GitHub tag, also confirm the read-only build job used Go 1.25.14 and transferred the complete release set, the publishing job alone received contents, identity-token, and attestation write permissions, every file listed in `SHA256SUMS` including `repo-knowledge-github-adapter.sh` and `LICENSE` was attached, and the artifacts have verifiable attestations. Enable private vulnerability reporting, secret scanning, and push protection in the public repository settings before accepting contributions.

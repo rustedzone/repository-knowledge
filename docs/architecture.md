@@ -46,6 +46,14 @@ Installation records every fully toolkit-owned file and digest in `.repo-knowled
 
 Consumers pin a release tag. They update by running the new binary and changing the GitHub workflow tag and toolkit input or GitLab include and package version in the same merge request. GitHub tag builds publish checksummed, attested binaries and the GitHub adapter; the GitLab pipeline remains available for registry-based distribution. The binary follows Semantic Versioning precedence and refuses a version downgrade, including a release-to-prerelease downgrade, unless `--allow-downgrade` is explicit.
 
+## CI and release trust boundary
+
+Every external GitHub Action used by the toolkit workflows is pinned to a full commit SHA with its exact release version recorded in a comment. A repository test scans every workflow and rejects mutable tags, branches, short SHAs, and mutable Docker tags. This turns action immutability into a maintained invariant rather than a review convention.
+
+Ordinary tests, vet, formatting, and both CLI builds run on Go 1.22.0—the minimum declared by `go.mod`—and Go 1.25.14, the release toolchain. Race-enabled tests run on Go 1.25.14 only.
+
+Tag releases cross a two-job privilege boundary. The build job has read-only contents access, checks the tag, runs the source checks, builds the release set, and uploads a short-lived immutable workflow artifact. The dependent publish job downloads that exact set and is the only job granted `contents: write`, `id-token: write`, and `attestations: write`; it attests and publishes without checking out or rebuilding source. The transfer actions are SHA-pinned under the same workflow invariant.
+
 ## CI adapter lifecycle
 
 The GitHub and GitLab integrations resolve platform-specific CI metadata but converge before enforcement:

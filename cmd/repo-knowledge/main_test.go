@@ -4,12 +4,86 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/rustedzone/repository-knowledge/internal/toolkit"
 )
+
+func TestRunSupportsCompactMetricsAndScopedEvidenceCommands(t *testing.T) {
+	root := t.TempDir()
+	runGitForCLI(t, root, "init", "--quiet")
+	runGitForCLI(t, root, "config", "user.email", "test@example.invalid")
+	runGitForCLI(t, root, "config", "user.name", "CLI Test")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	if code := run([]string{
+		"install", "--target", root, "--agent", "codex", "--agent-preflight", "codex=strict", "--preflight-context", "compact",
+	}, &stdout, &stderr); code != 0 {
+		t.Fatalf("install code=%d stderr=%q", code, stderr.String())
+	}
+	runGitForCLI(t, root, "add", ".")
+	runGitForCLI(t, root, "commit", "--quiet", "-m", "install")
+
+	stdout.Reset()
+	stderr.Reset()
+	if code := runWithInput([]string{"hook-context", "--target", root, "--agent", "codex", "--metrics"}, strings.NewReader(`{"session_id":"cli-evidence"}`), &stdout, &stderr); code != 0 {
+		t.Fatalf("hook metrics code=%d stderr=%q", code, stderr.String())
+	}
+	var metrics toolkit.ContextMetrics
+	if err := json.Unmarshal(stdout.Bytes(), &metrics); err != nil || metrics.Profile != toolkit.PreflightContextCompact || metrics.Bytes == 0 {
+		t.Fatalf("hook metrics=%+v err=%v output=%q", metrics, err, stdout.String())
+	}
+
+	stdout.Reset()
+	if code := runWithInput([]string{"hook-context", "--target", root, "--agent", "codex"}, strings.NewReader(`{"session_id":"cli-evidence"}`), &stdout, &stderr); code != 0 {
+		t.Fatal(stderr.String())
+	}
+	match := regexp.MustCompile(`--token ([a-f0-9]+)`).FindStringSubmatch(stdout.String())
+	if len(match) != 2 {
+		t.Fatalf("activation token missing: %q", stdout.String())
+	}
+	token := match[1]
+	stdout.Reset()
+	if code := run([]string{
+		"preflight-activate", "--target", root, "--token", token, "--route", "docs/index.md", "--workflow", "scoped", "--json",
+	}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), `"workflow": "scoped"`) {
+		t.Fatalf("activate code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if err := os.WriteFile(filepath.Join(root, "worker.go"), []byte("package worker\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stdout.Reset()
+	if code := run([]string{
+		"evidence-run", "--target", root, "--token", token, "--label", "unit-tests", "--", os.Args[0], "-test.run=TestCLICommandHelper", "--", "evidence-success",
+	}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), "verification: pass") {
+		t.Fatalf("evidence-run code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	stdout.Reset()
+	if code := run([]string{
+		"evidence-report", "--target", root, "--token", token, "--documentation-impact", "not-required",
+		"--reason", "No documented behavior changed.", "--evidence", "worker.go#worker", "--json",
+	}, &stdout, &stderr); code != 0 || !strings.Contains(stdout.String(), `"status": "complete"`) {
+		t.Fatalf("evidence-report code=%d stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+}
+
+func TestCLICommandHelper(t *testing.T) {
+	if len(os.Args) > 1 && os.Args[len(os.Args)-1] == "evidence-success" {
+		return
+	}
+}
+
+func runGitForCLI(t *testing.T, root string, args ...string) {
+	t.Helper()
+	command := exec.Command("git", append([]string{"-C", root}, args...)...)
+	if output, err := command.CombinedOutput(); err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, output)
+	}
+}
 
 func TestRunVersion(t *testing.T) {
 	t.Parallel()

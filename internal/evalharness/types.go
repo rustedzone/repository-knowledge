@@ -87,9 +87,20 @@ type GradeOptions struct {
 	Target           string
 	DurationMillis   int64
 	TokenUsage       *int64
+	Usage            *TokenUsageDetails
 	SemanticStatus   string
 	SemanticScore    *SemanticScore
 	SemanticReviewer string
+}
+
+const TokenSourceUnavailable = "unavailable"
+
+type TokenUsageDetails struct {
+	Source       string `json:"source"`
+	InputTokens  *int64 `json:"input_tokens,omitempty"`
+	OutputTokens *int64 `json:"output_tokens,omitempty"`
+	CachedTokens *int64 `json:"cached_tokens,omitempty"`
+	TotalTokens  *int64 `json:"total_tokens,omitempty"`
 }
 
 type SemanticScore struct {
@@ -105,32 +116,33 @@ type CheckResult struct {
 }
 
 type GradeResult struct {
-	SchemaVersion               string         `json:"schema_version"`
-	Family                      string         `json:"family"`
-	Condition                   string         `json:"condition"`
-	CaseID                      string         `json:"case_id"`
-	Revision                    string         `json:"revision"`
-	SourceCommit                string         `json:"source_commit,omitempty"`
-	Target                      string         `json:"target,omitempty"`
-	Agent                       string         `json:"agent"`
-	AgentVersion                string         `json:"agent_version"`
-	ModelVersion                string         `json:"model_version"`
-	ReasoningConfiguration      string         `json:"reasoning_configuration"`
-	RepositoryKnowledgeRevision string         `json:"repository_knowledge_revision"`
-	TrialNumber                 int            `json:"trial_number"`
-	RunDate                     string         `json:"run_date,omitempty"`
-	DurationMillis              int64          `json:"duration_millis"`
-	TokenUsage                  *int64         `json:"token_usage,omitempty"`
-	PreservedArtifact           string         `json:"preserved_artifact,omitempty"`
-	DeterministicStatus         string         `json:"deterministic_status"`
-	SemanticStatus              string         `json:"semantic_status"`
-	SemanticScore               *SemanticScore `json:"semantic_score,omitempty"`
-	SemanticReviewer            string         `json:"semantic_reviewer,omitempty"`
-	OverallStatus               string         `json:"overall_status"`
-	Checks                      []CheckResult  `json:"checks"`
-	Passed                      int            `json:"passed"`
-	Failed                      int            `json:"failed"`
-	Rubric                      string         `json:"rubric"`
+	SchemaVersion               string             `json:"schema_version"`
+	Family                      string             `json:"family"`
+	Condition                   string             `json:"condition"`
+	CaseID                      string             `json:"case_id"`
+	Revision                    string             `json:"revision"`
+	SourceCommit                string             `json:"source_commit,omitempty"`
+	Target                      string             `json:"target,omitempty"`
+	Agent                       string             `json:"agent"`
+	AgentVersion                string             `json:"agent_version"`
+	ModelVersion                string             `json:"model_version"`
+	ReasoningConfiguration      string             `json:"reasoning_configuration"`
+	RepositoryKnowledgeRevision string             `json:"repository_knowledge_revision"`
+	TrialNumber                 int                `json:"trial_number"`
+	RunDate                     string             `json:"run_date,omitempty"`
+	DurationMillis              int64              `json:"duration_millis"`
+	TokenUsage                  *int64             `json:"token_usage,omitempty"`
+	Usage                       *TokenUsageDetails `json:"usage,omitempty"`
+	PreservedArtifact           string             `json:"preserved_artifact,omitempty"`
+	DeterministicStatus         string             `json:"deterministic_status"`
+	SemanticStatus              string             `json:"semantic_status"`
+	SemanticScore               *SemanticScore     `json:"semantic_score,omitempty"`
+	SemanticReviewer            string             `json:"semantic_reviewer,omitempty"`
+	OverallStatus               string             `json:"overall_status"`
+	Checks                      []CheckResult      `json:"checks"`
+	Passed                      int                `json:"passed"`
+	Failed                      int                `json:"failed"`
+	Rubric                      string             `json:"rubric"`
 }
 
 type RecordOptions struct {

@@ -26,6 +26,7 @@ type commandOutcome struct {
 	value    any
 	exitCode int
 	json     bool
+	output   string
 }
 
 func main() {
@@ -69,6 +70,12 @@ func runWithInput(arguments []string, stdin io.Reader, stdout, stderr io.Writer)
 			return 2
 		}
 	} else {
+		if outcome.output != "" {
+			fmt.Fprint(stdout, outcome.output)
+			if !strings.HasSuffix(outcome.output, "\n") {
+				fmt.Fprintln(stdout)
+			}
+		}
 		fmt.Fprintln(stdout, summarize(arguments[0], outcome.value))
 	}
 	return outcome.exitCode
@@ -92,6 +99,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
 		allowDowngrade := flags.Bool("allow-downgrade", false, "allow update to an older toolkit version")
 		antigravityPreflight := flags.String("antigravity-preflight", "", "Antigravity preflight mode: observe or strict (default: observe; update retains existing mode)")
+		preflightContext := flags.String("preflight-context", "", "hook context profile: full or compact (default: full; update retains existing profile)")
 		var agentPreflight stringList
 		flags.Var(&agentPreflight, "agent-preflight", "per-agent preflight mode; repeatable: AGENT=observe or AGENT=strict")
 		allAgents := flags.Bool("all-agents", false, "select every supported agent adapter; cannot be combined with --agent")
@@ -107,6 +115,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		result, err := toolkit.Install(toolkit.InstallOptions{
 			Target: *target, Source: *source, Ref: *ref, AgentAdapters: adapters,
 			AllAgentAdapters: *allAgents, Update: command == "update", AllowDowngrade: *allowDowngrade, AntigravityPreflight: *antigravityPreflight, AgentPreflight: agentPreflight,
+			PreflightContext: *preflightContext,
 		})
 		return commandOutcome{value: result, json: *jsonOutput}, err
 	case "scan", "doctor":
@@ -134,11 +143,16 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository path or a path nested below it")
 		agent := flags.String("agent", "", "agent hook protocol: codex, claude-code, antigravity-ide, or cursor")
+		metrics := flags.Bool("metrics", false, "emit content-free context generation metrics instead of hook output")
 		if err := flags.Parse(args); err != nil {
 			return commandOutcome{}, err
 		}
 		if strings.TrimSpace(*agent) == "" {
 			return commandOutcome{}, fmt.Errorf("--agent is required")
+		}
+		if *metrics {
+			value, err := toolkit.MeasureHookContext(*target, *agent)
+			return commandOutcome{value: value}, err
 		}
 		value, err := toolkit.HookContext(*target, *agent, stdin)
 		return commandOutcome{value: value}, err
@@ -146,6 +160,7 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository path or a path nested below it")
 		token := flags.String("token", "", "opaque token injected by a strict preflight hook")
+		workflow := flags.String("workflow", toolkit.WorkflowStandard, "workflow profile: standard or scoped")
 		var routes stringList
 		flags.Var(&routes, "route", "selected documentation route; repeatable")
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
@@ -155,7 +170,47 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		if strings.TrimSpace(*token) == "" {
 			return commandOutcome{json: *jsonOutput}, fmt.Errorf("--token is required")
 		}
-		value, err := toolkit.PreflightActivate(*target, *token, routes)
+		value, err := toolkit.PreflightActivateWithOptions(toolkit.PreflightActivationOptions{Target: *target, Token: *token, Routes: routes, Workflow: *workflow})
+		return commandOutcome{value: value, json: *jsonOutput}, err
+	case "evidence-run":
+		flags := newFlagSet(command, stderr)
+		target := flags.String("target", ".", "repository path or a path nested below it")
+		token := flags.String("token", "", "opaque token for an active strict preflight session")
+		label := flags.String("label", "", "short verification label")
+		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON (command output is never included)")
+		if err := flags.Parse(args); err != nil {
+			return commandOutcome{json: *jsonOutput}, err
+		}
+		if strings.TrimSpace(*token) == "" || strings.TrimSpace(*label) == "" {
+			return commandOutcome{json: *jsonOutput}, fmt.Errorf("--token and --label are required")
+		}
+		value, err := toolkit.EvidenceRun(toolkit.EvidenceRunOptions{Target: *target, Token: *token, Label: *label, Command: flags.Args()})
+		exitCode := 0
+		if err == nil && value.ExitCode != 0 {
+			exitCode = 1
+		}
+		return commandOutcome{value: value, exitCode: exitCode, json: *jsonOutput, output: value.Output}, err
+	case "evidence-report":
+		flags := newFlagSet(command, stderr)
+		target := flags.String("target", ".", "repository path or a path nested below it")
+		token := flags.String("token", "", "opaque token for an active strict preflight session")
+		impact := flags.String("documentation-impact", "", "required or not-required")
+		reason := flags.String("reason", "", "specific reason when documentation is not required")
+		var evidenceRefs stringList
+		flags.Var(&evidenceRefs, "evidence", "source/config/test evidence reference; repeatable, optionally path#anchor")
+		var documentationFiles stringList
+		flags.Var(&documentationFiles, "documentation-file", "changed documentation file; repeatable")
+		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
+		if err := flags.Parse(args); err != nil {
+			return commandOutcome{json: *jsonOutput}, err
+		}
+		if strings.TrimSpace(*token) == "" {
+			return commandOutcome{json: *jsonOutput}, fmt.Errorf("--token is required")
+		}
+		value, err := toolkit.EvidenceReport(toolkit.EvidenceReportOptions{
+			Target: *target, Token: *token, DocumentationImpact: *impact, DocumentationFiles: documentationFiles,
+			EvidenceRefs: evidenceRefs, Reason: *reason,
+		})
 		return commandOutcome{value: value, json: *jsonOutput}, err
 	case "preflight-gate":
 		flags := newFlagSet(command, stderr)
@@ -285,7 +340,11 @@ func summarize(command string, value any) string {
 	case toolkit.PreflightGateResult:
 		return result.Output
 	case toolkit.PreflightActivationResult:
-		return fmt.Sprintf("preflight: %s\nroutes: %s", result.Status, strings.Join(result.Routes, ", "))
+		return fmt.Sprintf("preflight: %s\nworkflow: %s\nroutes: %s", result.Status, result.Workflow, strings.Join(result.Routes, ", "))
+	case toolkit.EvidenceRunResult:
+		return fmt.Sprintf("verification: %s\nlabel: %s\ndiff fingerprint: %s\noutput sha256: %s", result.Status, result.Label, result.DiffFingerprint, result.OutputSHA256)
+	case toolkit.EvidenceReceipt:
+		return fmt.Sprintf("evidence report: %s\nworkflow: %s\nmaterial changes: %d\nverifications: %d\ndiff fingerprint: %s", result.Status, result.Workflow, len(result.MaterialChanges), len(result.Verifications), result.DiffFingerprint)
 	default:
 		data, _ := json.MarshalIndent(value, "", "  ")
 		return string(data)
@@ -295,5 +354,5 @@ func summarize(command string, value any) string {
 func printUsage(output io.Writer) {
 	name := filepath.Base(os.Args[0])
 	fmt.Fprintf(output, "Usage: %s <command> [options]\n\n", name)
-	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, preflight-activate, preflight-gate, version")
+	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, preflight-activate, preflight-gate, evidence-run, evidence-report, version")
 }

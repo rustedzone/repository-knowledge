@@ -12,6 +12,8 @@ Add an extension at the narrowest layer that owns its concern:
 
 Default invariants must be portable and objective. Capability-specific defaults may activate only when a capability is declared or reliably detected. A classifier token is not sufficient evidence for a blocking semantic invariant.
 
+Scoped-work escalation is intentionally limited to deterministic path classifiers. Adding a high-risk class requires a stable classifier ID, focused tests for both escalation and false positives, and documentation of why scoped review is unsafe. Do not escalate based only on file count, diff length, or an LLM judgment. Evidence receipt changes must preserve the content-sensitive fingerprint, direct argument-vector execution, output-digest-only storage, and the distinction between path existence and semantic proof.
+
 When changing installed managed assets, keep `install` and `update` behavior symmetric and add an ownership-preservation test. When changing a release filename, update the Makefile, release workflow, GitHub reusable workflow and adapter, GitLab adapter, checksum verification, tests, and installation documentation together.
 
 ## Adding an agent adapter

@@ -19,6 +19,10 @@ func Grade(options GradeOptions) (GradeResult, error) {
 	if options.TokenUsage != nil && *options.TokenUsage < 0 {
 		return result, fmt.Errorf("token usage cannot be negative")
 	}
+	usage, legacyTotal, err := validateTokenUsage(options.Usage, options.TokenUsage)
+	if err != nil {
+		return result, err
+	}
 	semanticStatus, err := validateSemanticResult(options.SemanticStatus, options.SemanticScore, options.SemanticReviewer)
 	if err != nil {
 		return result, err
@@ -47,7 +51,7 @@ func Grade(options GradeOptions) (GradeResult, error) {
 		Agent: baseline.Agent, AgentVersion: baseline.AgentVersion, ModelVersion: baseline.ModelVersion,
 		ReasoningConfiguration:      baseline.ReasoningConfiguration,
 		RepositoryKnowledgeRevision: baseline.RepositoryKnowledgeRevision,
-		TrialNumber:                 baseline.TrialNumber, DurationMillis: options.DurationMillis, TokenUsage: options.TokenUsage,
+		TrialNumber:                 baseline.TrialNumber, DurationMillis: options.DurationMillis, TokenUsage: legacyTotal, Usage: usage,
 		SemanticStatus: semanticStatus, SemanticScore: options.SemanticScore,
 		SemanticReviewer: strings.TrimSpace(options.SemanticReviewer), OverallStatus: "pending_semantic_review",
 		Rubric: filepath.Join(caseRoot, spec.Rubric),
@@ -76,6 +80,57 @@ func Grade(options GradeOptions) (GradeResult, error) {
 		}
 	}
 	return result, nil
+}
+
+func validateTokenUsage(usage *TokenUsageDetails, legacy *int64) (*TokenUsageDetails, *int64, error) {
+	if usage == nil {
+		return nil, legacy, nil
+	}
+	copy := *usage
+	copy.Source = strings.TrimSpace(copy.Source)
+	if copy.Source == "" {
+		return nil, nil, fmt.Errorf("detailed token usage requires a source")
+	}
+	supportedSources := map[string]struct{}{
+		"codex": {}, "claude-code": {}, "antigravity-ide": {}, "cursor": {}, "manual": {}, TokenSourceUnavailable: {},
+	}
+	if _, ok := supportedSources[copy.Source]; !ok {
+		return nil, nil, fmt.Errorf("unsupported token usage source %q", copy.Source)
+	}
+	values := []*int64{copy.InputTokens, copy.OutputTokens, copy.CachedTokens, copy.TotalTokens}
+	for _, value := range values {
+		if value != nil && *value < 0 {
+			return nil, nil, fmt.Errorf("token usage cannot be negative")
+		}
+	}
+	if copy.Source == TokenSourceUnavailable {
+		for _, value := range values {
+			if value != nil {
+				return nil, nil, fmt.Errorf("unavailable token usage cannot include numeric values")
+			}
+		}
+		if legacy != nil {
+			return nil, nil, fmt.Errorf("unavailable token usage cannot include a legacy total")
+		}
+		return &copy, nil, nil
+	}
+	if copy.TotalTokens == nil && copy.InputTokens != nil && copy.OutputTokens != nil {
+		total := *copy.InputTokens + *copy.OutputTokens
+		copy.TotalTokens = &total
+	}
+	if copy.TotalTokens == nil && legacy != nil {
+		copy.TotalTokens = legacy
+	}
+	if copy.TotalTokens != nil && copy.InputTokens != nil && copy.OutputTokens != nil && *copy.TotalTokens != *copy.InputTokens+*copy.OutputTokens {
+		return nil, nil, fmt.Errorf("total token usage must equal input plus output tokens")
+	}
+	if legacy != nil && copy.TotalTokens != nil && *legacy != *copy.TotalTokens {
+		return nil, nil, fmt.Errorf("legacy and detailed total token usage disagree")
+	}
+	if legacy == nil {
+		legacy = copy.TotalTokens
+	}
+	return &copy, legacy, nil
 }
 
 func readBaseline(target, family string) (Baseline, error) {

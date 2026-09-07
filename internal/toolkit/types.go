@@ -19,6 +19,7 @@ type ToolkitManifest struct {
 	AgentAdapters        []string          `json:"agent_adapters"`
 	PreflightModes       map[string]string `json:"preflight_modes,omitempty"`
 	AntigravityPreflight string            `json:"antigravity_preflight,omitempty"`
+	PreflightContext     string            `json:"preflight_context,omitempty"`
 	ManagedFiles         []ManagedFile     `json:"managed_files"`
 	Ownership            map[string]string `json:"ownership"`
 }
@@ -34,11 +35,18 @@ type InstallOptions struct {
 	PreflightModes       map[string]string
 	AgentPreflight       []string
 	AntigravityPreflight string
+	PreflightContext     string
 }
 
 const (
-	AntigravityPreflightObserve = "observe"
-	AntigravityPreflightStrict  = "strict"
+	AntigravityPreflightObserve    = "observe"
+	AntigravityPreflightStrict     = "strict"
+	PreflightContextFull           = "full"
+	PreflightContextCompact        = "compact"
+	WorkflowStandard               = "standard"
+	WorkflowScoped                 = "scoped"
+	DocumentationImpactRequired    = "required"
+	DocumentationImpactNotRequired = "not_required"
 )
 
 type InstallResult struct {
@@ -139,9 +147,75 @@ type DoctorReport struct {
 }
 
 type PreflightActivationResult struct {
-	Status string   `json:"status"`
-	Root   string   `json:"root"`
-	Routes []string `json:"routes"`
+	Status   string   `json:"status"`
+	Root     string   `json:"root"`
+	Routes   []string `json:"routes"`
+	Workflow string   `json:"workflow"`
+}
+
+type PreflightActivationOptions struct {
+	Target   string
+	Token    string
+	Routes   []string
+	Workflow string
+}
+
+type ContextMetrics struct {
+	Profile          string `json:"profile"`
+	Bytes            int    `json:"bytes"`
+	Characters       int    `json:"characters"`
+	GenerationMillis int64  `json:"generation_millis"`
+	ArtifactCount    int    `json:"artifact_count"`
+	RouteCount       int    `json:"route_count"`
+}
+
+type VerificationRecord struct {
+	Label           string   `json:"label"`
+	Command         []string `json:"command"`
+	StartedAt       string   `json:"started_at"`
+	FinishedAt      string   `json:"finished_at"`
+	ExitCode        int      `json:"exit_code"`
+	OutputSHA256    string   `json:"output_sha256"`
+	DiffFingerprint string   `json:"diff_fingerprint"`
+}
+
+type EvidenceRunOptions struct {
+	Target  string
+	Token   string
+	Label   string
+	Command []string
+}
+
+type EvidenceRunResult struct {
+	VerificationRecord
+	Status string `json:"status"`
+	Output string `json:"-"`
+}
+
+type EvidenceReportOptions struct {
+	Target              string
+	Token               string
+	DocumentationImpact string
+	DocumentationFiles  []string
+	EvidenceRefs        []string
+	Reason              string
+}
+
+type EvidenceReceipt struct {
+	Schema               string               `json:"$schema"`
+	SchemaVersion        string               `json:"schema_version"`
+	Status               string               `json:"status"`
+	Root                 string               `json:"root"`
+	Workflow             string               `json:"workflow"`
+	DiffFingerprint      string               `json:"diff_fingerprint"`
+	MaterialChanges      []Change             `json:"material_changes"`
+	DocumentationChanges []Change             `json:"documentation_changes"`
+	Classifications      map[string][]string  `json:"classifications"`
+	Verifications        []VerificationRecord `json:"verifications"`
+	EvidenceRefs         []string             `json:"evidence_refs"`
+	DocumentationImpact  string               `json:"documentation_impact"`
+	DocumentationFiles   []string             `json:"documentation_files,omitempty"`
+	Reason               string               `json:"reason,omitempty"`
 }
 
 type PreflightGateResult struct {

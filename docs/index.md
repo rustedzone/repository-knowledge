@@ -28,6 +28,7 @@ Knowledge:
 - [Installation](installation.md)
 - [Testing](testing.md)
 - [Strict preflight TDD evidence](testing/strict-preflight-multi-agent.tdd.md)
+- [Scoped evidence and telemetry TDD evidence](testing/scoped-evidence-telemetry.tdd.md)
 
 Evidence anchors:
 - `internal/toolkit/install.go`

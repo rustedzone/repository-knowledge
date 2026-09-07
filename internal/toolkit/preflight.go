@@ -22,16 +22,19 @@ const preflightSessionTTL = 30 * time.Minute
 var preflightClock = time.Now
 
 type preflightSession struct {
-	SchemaVersion string            `json:"schema_version"`
-	Token         string            `json:"token"`
-	Root          string            `json:"root"`
-	Agent         string            `json:"agent"`
-	Conversation  string            `json:"conversation"`
-	CreatedAt     time.Time         `json:"created_at"`
-	ExpiresAt     time.Time         `json:"expires_at"`
-	Active        bool              `json:"active"`
-	Routes        []string          `json:"routes,omitempty"`
-	Digests       map[string]string `json:"digests"`
+	SchemaVersion  string               `json:"schema_version"`
+	Token          string               `json:"token"`
+	Root           string               `json:"root"`
+	Agent          string               `json:"agent"`
+	Conversation   string               `json:"conversation"`
+	CreatedAt      time.Time            `json:"created_at"`
+	ExpiresAt      time.Time            `json:"expires_at"`
+	Active         bool                 `json:"active"`
+	Routes         []string             `json:"routes,omitempty"`
+	Digests        map[string]string    `json:"digests"`
+	Workflow       string               `json:"workflow,omitempty"`
+	ContextMetrics ContextMetrics       `json:"context_metrics"`
+	Verifications  []VerificationRecord `json:"verifications,omitempty"`
 }
 
 type antigravityHookEvent struct {
@@ -96,7 +99,7 @@ func preflightDigests(root string) (map[string]string, RepositoryConfig, error) 
 	return digests, config, nil
 }
 
-func startOrResumePreflight(root, agent, conversation string) (preflightSession, error) {
+func startOrResumePreflight(root, agent, conversation string, metrics ...ContextMetrics) (preflightSession, error) {
 	digests, _, err := preflightDigests(root)
 	if err != nil {
 		return preflightSession{}, err
@@ -106,6 +109,12 @@ func startOrResumePreflight(root, agent, conversation string) (preflightSession,
 		return preflightSession{}, err
 	}
 	if existing, err := readPreflightSession(path); err == nil && validPreflightSession(existing, root, agent, digests) {
+		if len(metrics) > 0 {
+			existing.ContextMetrics = metrics[0]
+			if err := writePreflightSession(path, existing); err != nil {
+				return preflightSession{}, err
+			}
+		}
 		return existing, nil
 	} else if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return preflightSession{}, err
@@ -124,6 +133,10 @@ func startOrResumePreflight(root, agent, conversation string) (preflightSession,
 		CreatedAt:     now,
 		ExpiresAt:     now.Add(preflightSessionTTL),
 		Digests:       digests,
+		Workflow:      WorkflowStandard,
+	}
+	if len(metrics) > 0 {
+		session.ContextMetrics = metrics[0]
 	}
 	if err := writePreflightSession(path, session); err != nil {
 		return preflightSession{}, err
@@ -224,11 +237,15 @@ func preflightSessionByToken(token string) (preflightSession, string, error) {
 }
 
 func PreflightActivate(target, token string, routes []string) (PreflightActivationResult, error) {
-	root, err := findInstalledRepositoryRoot(target)
+	return PreflightActivateWithOptions(PreflightActivationOptions{Target: target, Token: token, Routes: routes, Workflow: WorkflowStandard})
+}
+
+func PreflightActivateWithOptions(options PreflightActivationOptions) (PreflightActivationResult, error) {
+	root, err := findInstalledRepositoryRoot(options.Target)
 	if err != nil {
 		return PreflightActivationResult{}, err
 	}
-	session, statePath, err := preflightSessionByToken(token)
+	session, statePath, err := preflightSessionByToken(options.Token)
 	if err != nil {
 		return PreflightActivationResult{}, err
 	}
@@ -242,16 +259,24 @@ func PreflightActivate(target, token string, routes []string) (PreflightActivati
 	if !validPreflightSession(session, root, session.Agent, digests) {
 		return PreflightActivationResult{}, fmt.Errorf("preflight token expired or repository knowledge changed; start a new task invocation")
 	}
-	validated, err := validatePreflightRoutes(root, config, routes)
+	validated, err := validatePreflightRoutes(root, config, options.Routes)
 	if err != nil {
 		return PreflightActivationResult{}, err
 	}
+	workflow := strings.TrimSpace(options.Workflow)
+	if workflow == "" {
+		workflow = WorkflowStandard
+	}
+	if workflow != WorkflowStandard && workflow != WorkflowScoped {
+		return PreflightActivationResult{}, fmt.Errorf("workflow must be %q or %q", WorkflowStandard, WorkflowScoped)
+	}
 	session.Active = true
 	session.Routes = validated
+	session.Workflow = workflow
 	if err := writePreflightSession(statePath, session); err != nil {
 		return PreflightActivationResult{}, err
 	}
-	return PreflightActivationResult{Status: "active", Root: root, Routes: validated}, nil
+	return PreflightActivationResult{Status: "active", Root: root, Routes: validated, Workflow: workflow}, nil
 }
 
 func validatePreflightRoutes(root string, config RepositoryConfig, routes []string) ([]string, error) {
@@ -441,7 +466,7 @@ func activationCommandAllowed(arguments json.RawMessage) bool {
 			hasToken = true
 		case "--route":
 			hasRoute = true
-		case "--target":
+		case "--target", "--workflow":
 		default:
 			return false
 		}

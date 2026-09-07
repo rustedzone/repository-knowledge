@@ -105,7 +105,11 @@ go run ./cmd/repo-knowledge-eval grade \
   --case frontend-onboarding \
   --target /tmp/frontend-onboarding-control-1 \
   --duration 12m30s \
-  --tokens 18420 \
+  --token-source codex \
+  --input-tokens 15000 \
+  --output-tokens 3420 \
+  --cached-tokens 6000 \
+  --total-tokens 18420 \
   --semantic-status pass \
   --semantic-score 16 \
   --semantic-available 18 \
@@ -115,7 +119,7 @@ go run ./cmd/repo-knowledge-eval grade \
   --artifact /tmp/frontend-onboarding-control-1.tar.gz
 ```
 
-Omit the semantic flags until blind review is complete. `--results` requires the date, duration, and preserved artifact. It writes:
+Omit the semantic flags until blind review is complete. Use only provider-reported token counts and name their source; do not convert characters, bytes, or elapsed time into estimated tokens. Cached tokens are recorded separately and remain part of provider input accounting, so `total_tokens` equals input plus output rather than input plus output plus cached. Use `--token-source unavailable` when the host exposes no usage, with no numeric token flags. The legacy `--tokens` total remains accepted for old automation. `--results` requires the date, duration, and preserved artifact. It writes:
 
 ```text
 evals/results/<benchmark>/<agent>/<date>-<condition>-<trial>.json
@@ -124,7 +128,7 @@ evals/results/<benchmark>/<agent>/<date>-<condition>-<trial>-artifact.<ext>
 
 Both files use exclusive-create semantics. Existing results cannot be overwritten through the harness. Commit every attempted trial, including deterministic or semantic failures; corrections use a new trial number rather than rewriting history.
 
-Result metadata records condition, agent and host version, model version, reasoning configuration, Repository Knowledge version or commit, source commit, case revision, trial number, duration, optional token usage, preserved artifact, deterministic checks, semantic score/status, and reviewer. Absolute disposable-target paths are removed from committed records.
+Result metadata records condition, agent and host version, model version, reasoning configuration, Repository Knowledge version or commit, source commit, case revision, trial number, duration, source-attributed token usage when available, preserved artifact, deterministic checks, semantic score/status, and reviewer. Absolute disposable-target paths are removed from committed records.
 
 Use [the evaluation report template](report-template.md) to compare a control/treatment pair. Compare paired outcomes rather than treating conformance success as product-effect evidence.
 

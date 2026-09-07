@@ -4,6 +4,17 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+### Added
+
+- Full and compact preflight context profiles with content-free payload size, character count, generation time, artifact count, and route count metrics.
+- Standard and scoped workflow activation, with deterministic escalation for API, authorization, persistence, integration, configuration, and deployment changes.
+- Direct `evidence-run` verification and typed `evidence-report` receipts bound to a content-sensitive worktree fingerprint, plus an installed JSON Schema.
+- Source-attributed input, output, cached, and total token fields in the outcome evaluation harness while retaining the legacy total-token field.
+
+### Changed
+
+- Agent completion guidance now requires actual diff, post-edit validation, source/config/test attribution, and a documentation-impact decision; strict sessions can enforce freshness mechanically.
+
 ## [0.10.1] - 2026-09-07
 
 ### Changed

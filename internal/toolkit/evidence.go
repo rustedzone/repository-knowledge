@@ -115,7 +115,7 @@ func EvidenceReport(options EvidenceReportOptions) (EvidenceReceipt, error) {
 		workflow = WorkflowStandard
 	}
 	return EvidenceReceipt{
-		SchemaVersion: "1.0", Status: "complete", Root: root, Workflow: workflow,
+		Schema: ".repo-knowledge/schemas/work-evidence.schema.json", SchemaVersion: "1.0", Status: "complete", Root: root, Workflow: workflow,
 		DiffFingerprint: fingerprint, MaterialChanges: impact.MaterialChanges, DocumentationChanges: impact.DocumentationChanges,
 		Classifications: impact.Classifications, Verifications: matching, EvidenceRefs: evidenceRefs,
 		DocumentationImpact: impactDecision, DocumentationFiles: documentationFiles, Reason: reason,
@@ -156,12 +156,14 @@ func worktreeFingerprint(root string) (string, []Change, error) {
 			return "", nil, err
 		}
 		contentDigest := "deleted"
+		mode := "deleted"
 		info, statErr := os.Lstat(path)
 		switch {
 		case os.IsNotExist(statErr):
 		case statErr != nil:
 			return "", nil, fmt.Errorf("inspect changed file %s: %w", change.Path, statErr)
 		case info.Mode()&os.ModeSymlink != 0:
+			mode = info.Mode().String()
 			target, err := os.Readlink(path)
 			if err != nil {
 				return "", nil, fmt.Errorf("read changed symlink %s: %w", change.Path, err)
@@ -169,14 +171,16 @@ func worktreeFingerprint(root string) (string, []Change, error) {
 			value := sha256.Sum256([]byte(target))
 			contentDigest = "symlink:" + hex.EncodeToString(value[:])
 		case info.Mode().IsRegular():
+			mode = info.Mode().String()
 			contentDigest, err = sha256File(path)
 			if err != nil {
 				return "", nil, err
 			}
 		default:
+			mode = info.Mode().String()
 			contentDigest = "mode:" + info.Mode().String()
 		}
-		_, _ = fmt.Fprintf(digest, "%s\t%s\t%s\n", change.Status, change.Path, contentDigest)
+		_, _ = fmt.Fprintf(digest, "%s\t%s\t%s\t%s\n", change.Status, change.Path, mode, contentDigest)
 	}
 	return hex.EncodeToString(digest.Sum(nil)), changes, nil
 }

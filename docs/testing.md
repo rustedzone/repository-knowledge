@@ -26,6 +26,16 @@ GOTOOLCHAIN=go1.22.0 go build -trimpath -o /tmp/repo-knowledge-eval ./cmd/repo-k
 go test -run TestImmutableUsesValidationRejectsMutableReferences ./...
 ```
 
+The scoped-evidence regression covers context profiles and content-free measurements, retained install settings, standard/scoped activation, high-risk escalation, direct command execution, failed checks, source attribution, documentation decisions, and verification invalidation after later edits:
+
+```bash
+go test -run 'TestHookContextProfiles|TestEvidence|TestScopedWorkflow' ./internal/toolkit
+go test -run 'TestGradeRecordsSourceAttributed|TestGradeRejectsUnattributed|TestTokenUsageCompatibility' ./internal/evalharness
+go test ./cmd/repo-knowledge ./cmd/repo-knowledge-eval
+```
+
+Coverage for a feature is measured over its affected implementation rather than represented by the lower whole-package total. The implementation record and exact RED/GREEN checkpoints are in [the scoped evidence and telemetry TDD report](testing/scoped-evidence-telemetry.tdd.md).
+
 ## Agent evaluation
 
 ### Conformance evaluations
@@ -134,6 +144,9 @@ git -C "${TARGET_REPOSITORY}" init
 21. Configure an enforced mapping such as `persistence -> docs/data/**`; verify an unrelated doc fails while a matching data doc passes.
 22. Put hand-maintained text at the configured generated-inventory path. Confirm `rebuild --apply` refuses to overwrite it.
 23. Run `update` with a newer binary and verify the selected adapters and consumer-owned files remain unchanged. Run `update --all-agents` from a subset installation and confirm it expands to every adapter. Switch back to an explicit subset and confirm only obsolete unmodified toolkit-managed adapter files are removed. Confirm an older binary is rejected without `--allow-downgrade`.
+24. Compare `hook-context --metrics` for fresh `full` and `compact` installations. Confirm compact is smaller, neither result contains source or documentation content, updates retain the profile, and no value is described as a token count.
+25. In a strict session, activate a low-risk fixture with `--workflow scoped`, run its tests through `evidence-run`, and produce an `evidence-report`. Modify the fixture after the test and confirm the report rejects stale verification. Repeat with an API path and confirm scoped completion requires reactivation as standard.
+26. Record evaluation usage from each supported host only when its provider exposes authoritative counts. Confirm input, output, cached, total, and source round-trip through JSON; use `--token-source unavailable` without numbers when the host exposes none.
 24. Install an agent adapter into a disposable repository and confirm both bootstrap helpers are managed files, the Unix helper has mode `0755`, and `doctor` accepts their recorded digests.
 25. Run the Unix helper against local fake release assets: verify it refuses an unconfirmed non-interactive install, accepts only a pinned semantic tag, checks `SHA256SUMS`, writes only to a directory already on PATH, and installs mode `0755`. The GitHub CI Windows job must also pass its PowerShell dry-run; before release, exercise the full Windows checksum, confirmation, user-local destination, and explicit user-PATH cases.
 26. Run the GitHub adapter integration test over committed base/head SHAs. Confirm advisory mode reports without blocking, acknowledgment mode propagates a failing exit code, invalid modes and object IDs fail closed, and the JSON report remains available.

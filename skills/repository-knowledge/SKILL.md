@@ -39,15 +39,35 @@ Before proposing a plan:
 - distinguish verified facts, inference, requirements, history, uncertainty, and conflicts using the contract's claim states;
 - surface a human decision gate only for the conditions named by the contract.
 
+Use the `standard` workflow by default. A `scoped` workflow is appropriate only for a clearly bounded, low-risk fix with known validation and no expected API, authorization, persistence, integration, configuration, or deployment impact. In strict mode, select it during activation with `--workflow scoped`. The deterministic evidence report will refuse scoped completion if the actual diff is classified as high risk; reactivate the same token with `--workflow standard` and perform the broader review. Do not use file count alone to decide that a change is low risk.
+
 The skill supplies knowledge and impact assessment. It does not replace the coding, testing, security, deployment, or domain-specific capability needed to implement the change.
 
 After implementation:
 
 - validate the actual diff and behavior;
+- do not claim completion without naming the changed files and the checks actually run;
 - reassess which claims and routes changed;
 - update only meaningfully affected documentation;
 - preserve requirement-only and historical content unless the user explicitly changes it;
 - report either `documentation impact: required` with the reconciled files, or `documentation impact: not required` with a concrete reason.
+
+When an active strict-preflight token is available, run relevant checks through the direct-execution wrapper (arguments after `--` are executed without an implicit shell):
+
+```text
+repo-knowledge evidence-run --token <token> --label unit-tests -- go test ./...
+```
+
+Then generate the completion receipt. Every content change after a verification invalidates that verification and requires rerunning it:
+
+```text
+repo-knowledge evidence-report --token <token> \
+  --evidence internal/example.go#Symbol \
+  --documentation-impact not-required \
+  --reason "Concrete reason tied to the current diff"
+```
+
+An evidence reference proves only that the named repository file exists and records the agent's attribution; it does not prove that an anchor is semantically correct. Verify the cited source, configuration, schema, or test before including it. If strict mode is unavailable, provide the same diff, validation, source-evidence, and documentation-impact facts in the final response without claiming a typed receipt.
 
 For a committed no-impact decision, run:
 

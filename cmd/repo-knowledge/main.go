@@ -150,10 +150,11 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 		if strings.TrimSpace(*agent) == "" {
 			return commandOutcome{}, fmt.Errorf("--agent is required")
 		}
-		value, err := toolkit.HookContext(*target, *agent, stdin)
 		if *metrics {
-			return commandOutcome{value: value.Metrics}, err
+			value, err := toolkit.MeasureHookContext(*target, *agent)
+			return commandOutcome{value: value}, err
 		}
+		value, err := toolkit.HookContext(*target, *agent, stdin)
 		return commandOutcome{value: value}, err
 	case "preflight-activate":
 		flags := newFlagSet(command, stderr)

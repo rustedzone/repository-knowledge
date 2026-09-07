@@ -202,6 +202,7 @@ type EvidenceReportOptions struct {
 }
 
 type EvidenceReceipt struct {
+	Schema               string               `json:"$schema"`
 	SchemaVersion        string               `json:"schema_version"`
 	Status               string               `json:"status"`
 	Root                 string               `json:"root"`

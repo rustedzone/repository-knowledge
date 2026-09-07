@@ -65,6 +65,7 @@ Repository Knowledge makes correct repository behavior cheaper and observable; i
 
 - Documentation is routing and intent evidence, not unquestionable truth. Current runtime behavior, tests, schemas, migrations, effective configuration, and implementation take precedence for their respective claims.
 - Native hooks are activation guardrails. A host may require trust, may disable hooks, or may surface a failed hook without blocking the session. Any supported agent can opt into `--agent-preflight AGENT=strict` to deny repository tool calls until routed knowledge is activated; that still does not prove the model understood the material or prevent a pure-text response.
+- Diff-bound evidence receipts reject stale checks and incomplete documentation decisions when invoked, but they are not yet universal host-level stop hooks and cannot prevent an agent from making an unsupported pure-text completion claim.
 - `scan` and `rebuild` produce structural discovery data, not semantic documentation. An agent still has to inspect implementation and tests to explain behavior accurately.
 - CI validates whether a material diff has documentation or an explicit impact decision. It does not determine semantic correctness, rewrite documentation, or commit changes.
 - The current outcome benchmark has not been executed and does not support a performance claim.
@@ -105,8 +106,10 @@ For documentation generation, ask the installed agent to inspect the complete re
 | `impact` | Classify a diff and calculate its material-path fingerprint. |
 | `acknowledge` | Record a documentation-impact decision bound to that fingerprint. |
 | `validate-doc-impact` | Apply advisory, acknowledgment, or explicitly mapped enforcement. |
-| `hook-context` | Emit the bounded repository preflight in the selected agent's native protocol. |
-| `preflight-activate` | Activate an injected strict preflight token with selected documentation routes. |
+| `hook-context` | Emit full or compact bounded preflight context; `--metrics` emits content-free size and generation measurements. |
+| `preflight-activate` | Activate a strict token with selected routes and the `standard` or `scoped` workflow. |
+| `evidence-run` | Run an explicit validation command and bind its result digest to the current worktree content. |
+| `evidence-report` | Require current successful checks, source evidence, and a documentation-impact decision before completion. |
 
 See the [installation guide](docs/installation.md) for complete usage and the [architecture guide](docs/architecture.md) for ownership and safety boundaries.
 

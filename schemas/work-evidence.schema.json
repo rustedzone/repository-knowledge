@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/repository-knowledge/work-evidence.schema.json",
+  "type": "object",
+  "required": ["$schema", "schema_version", "status", "root", "workflow", "diff_fingerprint", "material_changes", "documentation_changes", "classifications", "verifications", "evidence_refs", "documentation_impact"],
+  "properties": {
+    "$schema": {"const": ".repo-knowledge/schemas/work-evidence.schema.json"},
+    "schema_version": {"const": "1.0"},
+    "status": {"const": "complete"},
+    "root": {"type": "string", "minLength": 1},
+    "workflow": {"enum": ["standard", "scoped"]},
+    "diff_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "material_changes": {"$ref": "#/$defs/changes"},
+    "documentation_changes": {"$ref": "#/$defs/changes"},
+    "classifications": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string", "minLength": 1}}},
+    "verifications": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/verification"}},
+    "evidence_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "documentation_impact": {"enum": ["required", "not_required"]},
+    "documentation_files": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "reason": {"type": "string"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"documentation_impact": {"const": "required"}}},
+      "then": {"required": ["documentation_files"], "properties": {"documentation_files": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"documentation_impact": {"const": "not_required"}}},
+      "then": {"required": ["reason"], "properties": {"reason": {"minLength": 8}}}
+    }
+  ],
+  "$defs": {
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["status", "path"],
+        "properties": {"status": {"type": "string", "minLength": 1}, "path": {"type": "string", "minLength": 1}},
+        "additionalProperties": false
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["label", "command", "started_at", "finished_at", "exit_code", "output_sha256", "diff_fingerprint"],
+      "properties": {
+        "label": {"type": "string", "minLength": 1},
+        "command": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "started_at": {"type": "string", "format": "date-time"},
+        "finished_at": {"type": "string", "format": "date-time"},
+        "exit_code": {"const": 0},
+        "output_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+        "diff_fingerprint": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

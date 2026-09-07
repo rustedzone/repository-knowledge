@@ -104,6 +104,12 @@ Installation also registers a native repository preflight hook for each selected
 
 The installer merges only its exact `repo-knowledge hook-context` entry. Existing setting values and consumer hooks are preserved, and switching adapters removes only the obsolete toolkit entry. Invalid existing JSON stops installation rather than overwriting the file.
 
+The default `full` hook profile maximizes self-contained context. Use `--preflight-context compact` to inject a smaller routing payload and bounded documentation index; the agent must still read the selected contract and routes from disk. Updates retain the selected profile. Compare actual payload sizes and generation time without exposing content:
+
+```bash
+repo-knowledge hook-context --target . --agent codex --metrics
+```
+
 Every adapter uses observational preflight by default. Enable tool-level repository preflight enforcement explicitly for each selected agent:
 
 ```bash
@@ -125,8 +131,23 @@ Strict mode adds each host's managed tool gate alongside its lifecycle hook. The
 repo-knowledge preflight-activate \
   --token <injected-token> \
   --route docs/index.md \
-  --route docs/architecture.md
+  --route docs/architecture.md \
+  --workflow standard
 ```
+
+`standard` is the default. Use `--workflow scoped` only for a bounded low-risk fix with known validation. A scoped completion report automatically rejects an actual diff classified as API, authorization, persistence, integration, configuration, or deployment work; reactivate the same token with `--workflow standard` when that happens.
+
+For a strict session, bind validation and completion claims to the current content rather than a changed-path estimate:
+
+```bash
+repo-knowledge evidence-run --token <injected-token> --label unit-tests -- go test ./...
+repo-knowledge evidence-report --token <injected-token> \
+  --evidence internal/example.go#Symbol \
+  --documentation-impact not-required \
+  --reason "Internal refactor; documented behavior is unchanged."
+```
+
+`evidence-run` executes the argument vector after `--` directly and hashes its combined output without persisting that output in session state. Any later content change changes the worktree fingerprint and makes the verification stale. Use `--documentation-impact required --documentation-file docs/example.md` when the current diff includes reconciled documentation.
 
 `update` keeps existing per-agent modes when the flag is omitted. Use `--agent-preflight cursor=observe`, for example, to remove only that toolkit-managed gate and return that adapter to injection-only behavior. `--antigravity-preflight` remains a compatibility alias for Antigravity only.
 

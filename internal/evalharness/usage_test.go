@@ -42,6 +42,8 @@ func TestGradeRejectsUnattributedOrInconsistentTokenUsage(t *testing.T) {
 		{name: "missing source", usage: &TokenUsageDetails{TotalTokens: &total}, want: "source"},
 		{name: "unavailable with value", usage: &TokenUsageDetails{Source: TokenSourceUnavailable, TotalTokens: &total}, want: "unavailable"},
 		{name: "inconsistent total", usage: &TokenUsageDetails{Source: "codex", InputTokens: int64Pointer(80), OutputTokens: int64Pointer(30), TotalTokens: &total}, want: "total"},
+		{name: "unsupported source", usage: &TokenUsageDetails{Source: "estimated", TotalTokens: &total}, want: "unsupported"},
+		{name: "negative detail", usage: &TokenUsageDetails{Source: "codex", InputTokens: int64Pointer(-1)}, want: "negative"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			_, err := Grade(GradeOptions{CasesRoot: testBenchmarksRoot(t), CaseID: "frontend-onboarding", Target: target, Usage: test.usage})
@@ -49,6 +51,28 @@ func TestGradeRejectsUnattributedOrInconsistentTokenUsage(t *testing.T) {
 				t.Fatalf("Grade() error = %v, want %q", err, test.want)
 			}
 		})
+	}
+}
+
+func TestTokenUsageCompatibilityAndUnavailableState(t *testing.T) {
+	legacy := int64(42)
+	usage, total, err := validateTokenUsage(&TokenUsageDetails{Source: "manual"}, &legacy)
+	if err != nil || usage.TotalTokens == nil || *usage.TotalTokens != legacy || total == nil || *total != legacy {
+		t.Fatalf("legacy compatibility = %+v, %v, %v", usage, total, err)
+	}
+	usage, total, err = validateTokenUsage(&TokenUsageDetails{
+		Source: "cursor", InputTokens: int64Pointer(30), OutputTokens: int64Pointer(12),
+	}, nil)
+	if err != nil || usage.TotalTokens == nil || *usage.TotalTokens != 42 || total == nil || *total != 42 {
+		t.Fatalf("derived total = %+v, %v, %v", usage, total, err)
+	}
+	usage, total, err = validateTokenUsage(&TokenUsageDetails{Source: TokenSourceUnavailable}, nil)
+	if err != nil || usage.Source != TokenSourceUnavailable || total != nil {
+		t.Fatalf("unavailable usage = %+v, %v, %v", usage, total, err)
+	}
+	other := int64(43)
+	if _, _, err := validateTokenUsage(&TokenUsageDetails{Source: "codex", TotalTokens: &other}, &legacy); err == nil || !strings.Contains(err.Error(), "disagree") {
+		t.Fatalf("mismatched legacy total error = %v", err)
 	}
 }
 

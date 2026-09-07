@@ -20,6 +20,30 @@ type HookContextResult struct {
 	Metrics ContextMetrics
 }
 
+func MeasureHookContext(target, agent string) (ContextMetrics, error) {
+	if _, err := normalizeAgentAdapters([]string{agent}); err != nil {
+		return ContextMetrics{}, err
+	}
+	root, err := findInstalledRepositoryRoot(target)
+	if err != nil {
+		return ContextMetrics{}, err
+	}
+	manifest, _, err := readOptionalManifest(filepath.Join(root, ".repo-knowledge", "toolkit.json"))
+	if err != nil {
+		return ContextMetrics{}, err
+	}
+	profile := manifest.PreflightContext
+	if profile == "" {
+		profile = PreflightContextFull
+	}
+	started := time.Now()
+	context, artifactCount, routeCount, err := buildHookContext(root, profile)
+	if err != nil {
+		return ContextMetrics{}, err
+	}
+	return measureHookContext(profile, context, artifactCount, routeCount, started), nil
+}
+
 func HookContext(target, agent string, input io.Reader) (HookContextResult, error) {
 	adapters, err := normalizeAgentAdapters([]string{agent})
 	if err != nil {
@@ -46,10 +70,7 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 	if err != nil {
 		return HookContextResult{}, err
 	}
-	metrics := ContextMetrics{
-		Profile: profile, Bytes: len(context), Characters: utf8.RuneCountInString(context),
-		GenerationMillis: time.Since(started).Milliseconds(), ArtifactCount: artifactCount, RouteCount: routeCount,
-	}
+	metrics := measureHookContext(profile, context, artifactCount, routeCount, started)
 	if agent == agentAntigravityIDE {
 		event, err := parsePreflightHookEvent(agent, input)
 		if err != nil {
@@ -59,11 +80,17 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 			context = antigravityReminder
 		}
 		if preflightMode(manifest, agent) == AntigravityPreflightStrict {
-			session, err := startOrResumePreflight(root, agent, event.ConversationID, metrics)
+			session, err := startOrResumePreflight(root, agent, event.ConversationID)
 			if err != nil {
 				return HookContextResult{}, err
 			}
 			context += "\n\n" + strictPreflightContext(session)
+		}
+		metrics = measureHookContext(profile, context, artifactCount, routeCount, started)
+		if preflightMode(manifest, agent) == AntigravityPreflightStrict {
+			if err := recordPreflightContextMetrics(root, agent, event.ConversationID, metrics); err != nil {
+				return HookContextResult{}, err
+			}
 		}
 		output, err := json.Marshal(map[string]any{"injectSteps": []map[string]string{{"ephemeralMessage": context}}})
 		if err != nil {
@@ -76,11 +103,15 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 		if err != nil {
 			return HookContextResult{}, err
 		}
-		session, err := startOrResumePreflight(root, agent, event.ConversationID, metrics)
+		session, err := startOrResumePreflight(root, agent, event.ConversationID)
 		if err != nil {
 			return HookContextResult{}, err
 		}
 		context += "\n\n" + strictPreflightContext(session)
+		metrics = measureHookContext(profile, context, artifactCount, routeCount, started)
+		if err := recordPreflightContextMetrics(root, agent, event.ConversationID, metrics); err != nil {
+			return HookContextResult{}, err
+		}
 	}
 	if agent == agentCursor {
 		output, err := json.Marshal(map[string]string{"additional_context": context})
@@ -90,6 +121,26 @@ func HookContext(target, agent string, input io.Reader) (HookContextResult, erro
 		return HookContextResult{Agent: agent, Root: root, Output: string(output), Metrics: metrics}, nil
 	}
 	return HookContextResult{Agent: agent, Root: root, Output: context, Metrics: metrics}, nil
+}
+
+func measureHookContext(profile, context string, artifactCount, routeCount int, started time.Time) ContextMetrics {
+	return ContextMetrics{
+		Profile: profile, Bytes: len(context), Characters: utf8.RuneCountInString(context),
+		GenerationMillis: time.Since(started).Milliseconds(), ArtifactCount: artifactCount, RouteCount: routeCount,
+	}
+}
+
+func recordPreflightContextMetrics(root, agent, conversation string, metrics ContextMetrics) error {
+	path, err := preflightSessionPath(root, agent, conversation)
+	if err != nil {
+		return err
+	}
+	session, err := readPreflightSession(path)
+	if err != nil {
+		return err
+	}
+	session.ContextMetrics = metrics
+	return writePreflightSession(path, session)
 }
 
 func strictPreflightContext(session preflightSession) string {

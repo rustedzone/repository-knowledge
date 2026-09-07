@@ -4,6 +4,8 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-07
+
 ### Added
 
 - Full and compact preflight context profiles with content-free payload size, character count, generation time, artifact count, and route count metrics.

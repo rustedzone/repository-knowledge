@@ -2,6 +2,7 @@ package toolkit
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -291,6 +292,86 @@ func TestPreflightGateSupportsOtherAgentsAndAllowsAbsoluteKnowledgePaths(t *test
 	}
 	if result, err := PreflightGate(root, agentCodex, strings.NewReader(`{"session_id":"observe","tool_name":"Bash","tool_input":{"command":"git status"}}`)); err != nil || result.Decision != "allow" {
 		t.Fatalf("Codex observe gate = %+v, %v", result, err)
+	}
+}
+
+func TestStrictPreflightRejectsResolvedKnowledgePathEscapes(t *testing.T) {
+	root := newGitRepository(t)
+	if _, err := Install(InstallOptions{
+		Target: root, AgentAdapters: []string{agentCodex}, PreflightModes: map[string]string{agentCodex: AntigravityPreflightStrict},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	documentationTarget := filepath.Join(root, "docs", "linked.md")
+	if err := os.WriteFile(documentationTarget, []byte("# Linked\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	documentationLink := filepath.Join(root, "docs", "documentation-link.md")
+	if err := os.Symlink("linked.md", documentationLink); err != nil {
+		t.Fatal(err)
+	}
+
+	privateDirectory := filepath.Join(root, "private")
+	if err := os.Mkdir(privateDirectory, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	privateTarget := filepath.Join(privateDirectory, "secret.txt")
+	if err := os.WriteFile(privateTarget, []byte("private\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	privateLink := filepath.Join(root, "docs", "private-link")
+	if err := os.Symlink(filepath.Join("..", "private", "secret.txt"), privateLink); err != nil {
+		t.Fatal(err)
+	}
+
+	externalTarget := filepath.Join(t.TempDir(), "outside.txt")
+	if err := os.WriteFile(externalTarget, []byte("outside\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	externalLink := filepath.Join(root, "docs", "external-link")
+	if err := os.Symlink(externalTarget, externalLink); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name    string
+		path    string
+		allowed bool
+	}{
+		{name: "absolute documentation file", path: filepath.Join(root, "docs", "index.md"), allowed: true},
+		{name: "relative documentation symlink", path: "docs/documentation-link.md", allowed: true},
+		{name: "absolute documentation symlink", path: documentationLink, allowed: true},
+		{name: "relative symlink outside knowledge directory", path: "docs/private-link", allowed: false},
+		{name: "absolute symlink outside knowledge directory", path: privateLink, allowed: false},
+		{name: "relative symlink outside repository", path: "docs/external-link", allowed: false},
+		{name: "absolute symlink outside repository", path: externalLink, allowed: false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			arguments, err := json.Marshal(map[string]string{"path": test.path})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if actual := knowledgePathReadAllowed(root, arguments); actual != test.allowed {
+				t.Fatalf("knowledgePathReadAllowed(%q) = %t, want %t", test.path, actual, test.allowed)
+			}
+		})
+	}
+
+	input, err := json.Marshal(map[string]any{
+		"session_id": "symlink-escape",
+		"tool_name":  "Read",
+		"tool_input": map[string]string{"path": externalLink},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, err := PreflightGate(root, agentCodex, strings.NewReader(string(input)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Decision != "deny" {
+		t.Fatalf("absolute symlink gate = %+v, want deny", result)
 	}
 }
 

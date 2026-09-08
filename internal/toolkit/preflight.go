@@ -497,17 +497,14 @@ func knowledgePathReadAllowed(root string, arguments json.RawMessage) bool {
 	if err != nil {
 		return false
 	}
-	indexPath, err := repositoryPath(root, config.Documentation.Index, "documentation.index")
-	if err != nil {
-		return false
-	}
 	allowed := []string{
-		filepath.Join(root, ".repo-knowledge"),
-		filepath.Join(root, ".agents", "skills", "repository-knowledge"),
-		filepath.Dir(indexPath),
+		".repo-knowledge",
+		filepath.Join(".agents", "skills", "repository-knowledge"),
+		filepath.Dir(config.Documentation.Index),
 	}
 	for _, directory := range allowed {
-		if pathWithin(directory, candidate) {
+		resolvedDirectory, err := preflightPath(root, directory)
+		if err == nil && pathWithin(resolvedDirectory, candidate) {
 			return true
 		}
 	}
@@ -515,8 +512,24 @@ func knowledgePathReadAllowed(root string, arguments json.RawMessage) bool {
 }
 
 func preflightPath(root, value string) (string, error) {
-	if filepath.IsAbs(value) {
-		return filepath.Clean(value), nil
+	clean := filepath.Clean(value)
+	if filepath.IsAbs(clean) {
+		rootAbsolute, err := filepath.Abs(root)
+		if err != nil {
+			return "", fmt.Errorf("resolve repository root: %w", err)
+		}
+		clean, err = filepath.Rel(rootAbsolute, clean)
+		if err != nil {
+			return "", fmt.Errorf("resolve preflight tool path: %w", err)
+		}
 	}
-	return repositoryPath(root, value, "preflight tool path")
+	candidate, err := repositoryPath(root, clean, "preflight tool path")
+	if err != nil {
+		return "", err
+	}
+	resolved, err := filepath.EvalSymlinks(candidate)
+	if err != nil {
+		return "", fmt.Errorf("resolve preflight tool path symlinks: %w", err)
+	}
+	return resolved, nil
 }

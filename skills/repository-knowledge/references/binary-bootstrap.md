@@ -6,7 +6,7 @@ Use this procedure only when the installed skill is available but `repo-knowledg
 
 1. Check `command -v repo-knowledge` on macOS/Linux or `Get-Command repo-knowledge` on Windows.
 2. If the command is missing, read `.repo-knowledge/toolkit.json` from the repository root.
-3. Use its exact semantic `ref`, such as `v0.11.0`. Never substitute `latest`, a branch, or an unpinned ref.
+3. Use its exact semantic `ref`, such as `v0.11.1`. Never substitute `latest`, a branch, or an unpinned ref.
 4. Accept `https://github.com/rustedzone/repository-knowledge` as the canonical source. Treat the legacy source value `release-binary` as this canonical repository. If a manifest names a different source, explain it and obtain explicit confirmation before downloading from that source; the bundled bootstrap scripts accept only an `OWNER/REPO` GitHub identity.
 5. When working on the toolkit repository itself, use the root `VERSION` file and its canonical GitHub source. If neither a valid manifest ref nor the toolkit `VERSION` file exists, stop and ask the user which exact release to trust.
 
@@ -18,7 +18,7 @@ Locate the script under this skill's `scripts/` directory. Preview macOS/Linux r
 
 ```bash
 sh scripts/install-binary.sh \
-  --version v0.11.0 \
+  --version v0.11.1 \
   --repository rustedzone/repository-knowledge \
   --dry-run
 ```
@@ -27,7 +27,7 @@ On Windows, preview the default user-local destination and user PATH change:
 
 ```powershell
 & scripts/install-binary.ps1 `
-  -Version v0.11.0 `
+  -Version v0.11.1 `
   -Repository rustedzone/repository-knowledge `
   -AddToPath `
   -DryRun
@@ -50,7 +50,7 @@ On macOS or Linux, the default is `~/.local/bin` or `~/bin`, but only when the c
 
 ```bash
 sh scripts/install-binary.sh \
-  --version v0.11.0 \
+  --version v0.11.1 \
   --repository rustedzone/repository-knowledge \
   --yes
 ```
@@ -61,7 +61,7 @@ On Windows, install to `%LOCALAPPDATA%\Programs\repo-knowledge\bin` and add that
 
 ```powershell
 & scripts/install-binary.ps1 `
-  -Version v0.11.0 `
+  -Version v0.11.1 `
   -Repository rustedzone/repository-knowledge `
   -AddToPath `
   -Yes

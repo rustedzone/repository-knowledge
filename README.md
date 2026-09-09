@@ -45,12 +45,12 @@ Conformance results answer a different question—whether an agent follows the R
 
 ## Three-command quickstart
 
-First, download the pinned [v0.11.0 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.11.0), verify its checksum and attestation, and put the executable on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) provides platform and verification details.
+First, download the pinned [v0.11.1 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.11.1), verify its checksum and attestation, and put the executable on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) provides platform and verification details.
 
 From the repository you want Codex to understand:
 
 ```bash
-repo-knowledge install --target . --agent codex --source https://github.com/rustedzone/repository-knowledge --ref v0.11.0
+repo-knowledge install --target . --agent codex --source https://github.com/rustedzone/repository-knowledge --ref v0.11.1
 repo-knowledge doctor --target .
 codex
 ```

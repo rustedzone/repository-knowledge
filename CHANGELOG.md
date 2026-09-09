@@ -4,6 +4,10 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+### Fixed
+
+- Strict preflight resolves requested knowledge paths and their allowed roots before containment checks, denying symlinked reads that leave the permitted knowledge directory.
+
 ## [0.11.0] - 2026-09-07
 
 ### Added

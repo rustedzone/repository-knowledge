@@ -1,5 +1,7 @@
 package evalharness
 
+import "github.com/rustedzone/repository-knowledge/internal/toolkit"
+
 const (
 	FamilyConformance = "conformance"
 	FamilyBenchmark   = "outcome_benchmark"
@@ -7,7 +9,19 @@ const (
 	ConditionConformance = "conformance"
 	ConditionControl     = "control"
 	ConditionTreatment   = "treatment"
+
+	PreflightContextFull    = toolkit.PreflightContextFull
+	PreflightContextCompact = toolkit.PreflightContextCompact
 )
+
+type HookPayloadMetrics struct {
+	Profile          string `json:"profile"`
+	Bytes            int    `json:"bytes"`
+	Characters       int    `json:"characters"`
+	GenerationMillis int64  `json:"generation_millis"`
+	ArtifactCount    int    `json:"artifact_count"`
+	RouteCount       int    `json:"route_count"`
+}
 
 type Spec struct {
 	SchemaVersion           string      `json:"schema_version"`
@@ -35,19 +49,21 @@ type CheckSpec struct {
 }
 
 type Baseline struct {
-	SchemaVersion               string            `json:"schema_version"`
-	Family                      string            `json:"family"`
-	Condition                   string            `json:"condition"`
-	CaseID                      string            `json:"case_id"`
-	CaseRevision                string            `json:"case_revision"`
-	SourceCommit                string            `json:"source_commit,omitempty"`
-	Agent                       string            `json:"agent"`
-	AgentVersion                string            `json:"agent_version"`
-	ModelVersion                string            `json:"model_version"`
-	ReasoningConfiguration      string            `json:"reasoning_configuration"`
-	RepositoryKnowledgeRevision string            `json:"repository_knowledge_revision"`
-	TrialNumber                 int               `json:"trial_number"`
-	Files                       map[string]string `json:"files"`
+	SchemaVersion               string              `json:"schema_version"`
+	Family                      string              `json:"family"`
+	Condition                   string              `json:"condition"`
+	CaseID                      string              `json:"case_id"`
+	CaseRevision                string              `json:"case_revision"`
+	SourceCommit                string              `json:"source_commit,omitempty"`
+	Agent                       string              `json:"agent"`
+	AgentVersion                string              `json:"agent_version"`
+	ModelVersion                string              `json:"model_version"`
+	ReasoningConfiguration      string              `json:"reasoning_configuration"`
+	RepositoryKnowledgeRevision string              `json:"repository_knowledge_revision"`
+	TrialNumber                 int                 `json:"trial_number"`
+	PreflightContext            string              `json:"preflight_context,omitempty"`
+	HookPayload                 *HookPayloadMetrics `json:"hook_payload,omitempty"`
+	Files                       map[string]string   `json:"files"`
 }
 
 type PrepareOptions struct {
@@ -61,24 +77,27 @@ type PrepareOptions struct {
 	ReasoningConfiguration      string
 	RepositoryKnowledgeRevision string
 	TrialNumber                 int
+	PreflightContext            string
 }
 
 type PrepareResult struct {
-	Family                      string `json:"family"`
-	Condition                   string `json:"condition"`
-	CaseID                      string `json:"case_id"`
-	Revision                    string `json:"revision"`
-	SourceCommit                string `json:"source_commit,omitempty"`
-	Target                      string `json:"target"`
-	Baseline                    string `json:"baseline"`
-	Agent                       string `json:"agent"`
-	AgentVersion                string `json:"agent_version"`
-	ModelVersion                string `json:"model_version"`
-	ReasoningConfiguration      string `json:"reasoning_configuration"`
-	RepositoryKnowledgeRevision string `json:"repository_knowledge_revision"`
-	TrialNumber                 int    `json:"trial_number"`
-	Prompt                      string `json:"prompt"`
-	Rubric                      string `json:"rubric,omitempty"`
+	Family                      string              `json:"family"`
+	Condition                   string              `json:"condition"`
+	CaseID                      string              `json:"case_id"`
+	Revision                    string              `json:"revision"`
+	SourceCommit                string              `json:"source_commit,omitempty"`
+	Target                      string              `json:"target"`
+	Baseline                    string              `json:"baseline"`
+	Agent                       string              `json:"agent"`
+	AgentVersion                string              `json:"agent_version"`
+	ModelVersion                string              `json:"model_version"`
+	ReasoningConfiguration      string              `json:"reasoning_configuration"`
+	RepositoryKnowledgeRevision string              `json:"repository_knowledge_revision"`
+	TrialNumber                 int                 `json:"trial_number"`
+	PreflightContext            string              `json:"preflight_context,omitempty"`
+	HookPayload                 *HookPayloadMetrics `json:"hook_payload,omitempty"`
+	Prompt                      string              `json:"prompt"`
+	Rubric                      string              `json:"rubric,omitempty"`
 }
 
 type GradeOptions struct {
@@ -116,33 +135,35 @@ type CheckResult struct {
 }
 
 type GradeResult struct {
-	SchemaVersion               string             `json:"schema_version"`
-	Family                      string             `json:"family"`
-	Condition                   string             `json:"condition"`
-	CaseID                      string             `json:"case_id"`
-	Revision                    string             `json:"revision"`
-	SourceCommit                string             `json:"source_commit,omitempty"`
-	Target                      string             `json:"target,omitempty"`
-	Agent                       string             `json:"agent"`
-	AgentVersion                string             `json:"agent_version"`
-	ModelVersion                string             `json:"model_version"`
-	ReasoningConfiguration      string             `json:"reasoning_configuration"`
-	RepositoryKnowledgeRevision string             `json:"repository_knowledge_revision"`
-	TrialNumber                 int                `json:"trial_number"`
-	RunDate                     string             `json:"run_date,omitempty"`
-	DurationMillis              int64              `json:"duration_millis"`
-	TokenUsage                  *int64             `json:"token_usage,omitempty"`
-	Usage                       *TokenUsageDetails `json:"usage,omitempty"`
-	PreservedArtifact           string             `json:"preserved_artifact,omitempty"`
-	DeterministicStatus         string             `json:"deterministic_status"`
-	SemanticStatus              string             `json:"semantic_status"`
-	SemanticScore               *SemanticScore     `json:"semantic_score,omitempty"`
-	SemanticReviewer            string             `json:"semantic_reviewer,omitempty"`
-	OverallStatus               string             `json:"overall_status"`
-	Checks                      []CheckResult      `json:"checks"`
-	Passed                      int                `json:"passed"`
-	Failed                      int                `json:"failed"`
-	Rubric                      string             `json:"rubric"`
+	SchemaVersion               string              `json:"schema_version"`
+	Family                      string              `json:"family"`
+	Condition                   string              `json:"condition"`
+	CaseID                      string              `json:"case_id"`
+	Revision                    string              `json:"revision"`
+	SourceCommit                string              `json:"source_commit,omitempty"`
+	Target                      string              `json:"target,omitempty"`
+	Agent                       string              `json:"agent"`
+	AgentVersion                string              `json:"agent_version"`
+	ModelVersion                string              `json:"model_version"`
+	ReasoningConfiguration      string              `json:"reasoning_configuration"`
+	RepositoryKnowledgeRevision string              `json:"repository_knowledge_revision"`
+	TrialNumber                 int                 `json:"trial_number"`
+	PreflightContext            string              `json:"preflight_context,omitempty"`
+	HookPayload                 *HookPayloadMetrics `json:"hook_payload,omitempty"`
+	RunDate                     string              `json:"run_date,omitempty"`
+	DurationMillis              int64               `json:"duration_millis"`
+	TokenUsage                  *int64              `json:"token_usage,omitempty"`
+	Usage                       *TokenUsageDetails  `json:"usage,omitempty"`
+	PreservedArtifact           string              `json:"preserved_artifact,omitempty"`
+	DeterministicStatus         string              `json:"deterministic_status"`
+	SemanticStatus              string              `json:"semantic_status"`
+	SemanticScore               *SemanticScore      `json:"semantic_score,omitempty"`
+	SemanticReviewer            string              `json:"semantic_reviewer,omitempty"`
+	OverallStatus               string              `json:"overall_status"`
+	Checks                      []CheckResult       `json:"checks"`
+	Passed                      int                 `json:"passed"`
+	Failed                      int                 `json:"failed"`
+	Rubric                      string              `json:"rubric"`
 }
 
 type RecordOptions struct {

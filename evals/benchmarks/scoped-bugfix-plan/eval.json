@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "family": "outcome_benchmark",
+  "id": "scoped-bugfix-plan",
+  "revision": "1",
+  "source_commit": "821034760d0b6dfd52c3522b5eb195c18b7f0857",
+  "description": "Neutral planning task for a bounded frontend double-submission bug that should not require source or documentation changes.",
+  "fixture": "../../cases/frontend-nextjs/fixture",
+  "prompt": "prompt.md",
+  "rubric": "rubric.md",
+  "allowed_changes": [
+    "implementation-plan.md"
+  ],
+  "expected_behavioral_trace": [
+    "Locate the submit lifecycle in UserForm and identify Formik as the owner of submission state.",
+    "Plan a minimal disabled-state change without altering the API, persistence, authorization, configuration, or deployment boundaries.",
+    "Identify focused component behavior to verify successful and pending submission paths.",
+    "Explain why durable repository documentation is unaffected by the bounded behavior fix."
+  ],
+  "checks": [
+    {
+      "id": "plan-created",
+      "type": "paths_exist",
+      "paths": ["implementation-plan.md"]
+    },
+    {
+      "id": "source-grounded-plan",
+      "type": "contains_all",
+      "glob": "implementation-plan.md",
+      "patterns": [
+        "src/features/users/UserForm.tsx",
+        "UserForm",
+        "isSubmitting",
+        "src/features/users/UserForm.test.tsx"
+      ]
+    },
+    {
+      "id": "documentation-impact-considered",
+      "type": "contains_all",
+      "glob": "implementation-plan.md",
+      "patterns": ["documentation impact", "not required"]
+    },
+    {
+      "id": "fixture-source-preserved",
+      "type": "protected_files_unchanged"
+    }
+  ]
+}

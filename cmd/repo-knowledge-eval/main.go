@@ -65,6 +65,7 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 		reasoning := flags.String("reasoning", "", "reasoning configuration used for the trial")
 		toolkitRevision := flags.String("repository-knowledge-revision", "v"+repositoryknowledge.Version(), "Repository Knowledge version or commit")
 		trial := flags.Int("trial", 1, "positive trial number")
+		preflightContext := flags.String("preflight-context", "", "treatment preflight context: full or compact (default: full)")
 		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
 		if err := flags.Parse(arguments[1:]); err != nil {
 			return 2
@@ -81,7 +82,7 @@ func run(arguments []string, stdout, stderr io.Writer) int {
 		result, err := evalharness.Prepare(evalharness.PrepareOptions{
 			CasesRoot: root, CaseID: *caseID, Output: *output, Condition: *condition, Agent: *agent,
 			AgentVersion: *agentVersion, ModelVersion: *modelVersion, ReasoningConfiguration: *reasoning,
-			RepositoryKnowledgeRevision: *toolkitRevision, TrialNumber: *trial,
+			RepositoryKnowledgeRevision: *toolkitRevision, TrialNumber: *trial, PreflightContext: *preflightContext,
 		})
 		if err != nil {
 			fmt.Fprintln(stderr, "error:", err)

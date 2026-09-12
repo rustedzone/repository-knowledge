@@ -29,19 +29,173 @@ func TestOutcomeBenchmarkSpecIsNeutralAndComplete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(specs) != 1 || specs[0].ID != "frontend-onboarding" {
+	if len(specs) != 2 || specs[0].ID != "frontend-onboarding" || specs[1].ID != "scoped-bugfix-plan" {
 		t.Fatalf("unexpected benchmark specs: %+v", specs)
 	}
-	spec := specs[0]
-	if spec.Family != FamilyBenchmark || spec.SourceCommit == "" || len(spec.ExpectedBehavioralTrace) == 0 {
-		t.Fatalf("incomplete benchmark spec: %+v", spec)
+	for _, spec := range specs {
+		if spec.Family != FamilyBenchmark || spec.SourceCommit == "" || len(spec.ExpectedBehavioralTrace) == 0 {
+			t.Fatalf("incomplete benchmark spec: %+v", spec)
+		}
+		prompt, err := os.ReadFile(filepath.Join(testBenchmarksRoot(t), spec.ID, spec.Prompt))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if mentionsRepositoryKnowledge(string(prompt)) {
+			t.Fatalf("benchmark prompt is not neutral: %s", prompt)
+		}
 	}
-	prompt, err := os.ReadFile(filepath.Join(testBenchmarksRoot(t), spec.ID, spec.Prompt))
+}
+
+func TestOutcomeBenchmarkTreatmentPreflightContextSurvivesPrepareGradeAndRecord(t *testing.T) {
+	t.Parallel()
+	target := filepath.Join(t.TempDir(), "target")
+	options := benchmarkPrepareOptions(target, ConditionTreatment, "codex", 4)
+	options.PreflightContext = PreflightContextCompact
+	prepared, err := Prepare(options)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if mentionsRepositoryKnowledge(string(prompt)) {
-		t.Fatalf("benchmark prompt is not neutral: %s", prompt)
+	if prepared.PreflightContext != PreflightContextCompact || prepared.HookPayload == nil {
+		t.Fatalf("prepared profile metadata = %+v", prepared)
+	}
+	if prepared.HookPayload.Profile != PreflightContextCompact || prepared.HookPayload.Bytes < 1 || prepared.HookPayload.Characters < 1 || prepared.HookPayload.GenerationMillis < 0 {
+		t.Fatalf("prepared hook payload metrics = %+v", prepared.HookPayload)
+	}
+
+	data, err := os.ReadFile(prepared.Baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var baseline Baseline
+	if err := json.Unmarshal(data, &baseline); err != nil {
+		t.Fatal(err)
+	}
+	if baseline.PreflightContext != PreflightContextCompact || baseline.HookPayload == nil || baseline.HookPayload.Profile != PreflightContextCompact {
+		t.Fatalf("baseline profile metadata = %+v", baseline)
+	}
+
+	grade, err := Grade(GradeOptions{
+		CasesRoot: testBenchmarksRoot(t), CaseID: "frontend-onboarding", Target: target, DurationMillis: 2500,
+		Usage: &TokenUsageDetails{
+			Source: "codex", InputTokens: int64Pointer(100), OutputTokens: int64Pointer(10), TotalTokens: int64Pointer(110),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if grade.PreflightContext != PreflightContextCompact || grade.HookPayload == nil || grade.HookPayload.Bytes != prepared.HookPayload.Bytes {
+		t.Fatalf("grade profile metadata = %+v", grade)
+	}
+	if grade.Usage == nil || grade.Usage.InputTokens == nil || *grade.Usage.InputTokens != 100 {
+		t.Fatalf("provider usage was not preserved separately: %+v", grade.Usage)
+	}
+
+	artifact := filepath.Join(t.TempDir(), "output.patch")
+	if err := os.WriteFile(artifact, []byte("benchmark output\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resultsRoot := filepath.Join(t.TempDir(), "results")
+	recorded, err := Record(RecordOptions{ResultsRoot: resultsRoot, RunDate: "2026-09-12", Artifact: artifact}, grade)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if recorded.Result.PreflightContext != PreflightContextCompact || recorded.Result.HookPayload == nil || recorded.Result.HookPayload.Profile != PreflightContextCompact {
+		t.Fatalf("recorded profile metadata = %+v", recorded.Result)
+	}
+	if !strings.Contains(filepath.Base(recorded.ResultPath), "-treatment-compact-4.json") {
+		t.Fatalf("compact result path does not identify profile: %s", recorded.ResultPath)
+	}
+	recordedData, err := os.ReadFile(recorded.ResultPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var persisted GradeResult
+	if err := json.Unmarshal(recordedData, &persisted); err != nil {
+		t.Fatal(err)
+	}
+	if persisted.PreflightContext != PreflightContextCompact || persisted.HookPayload == nil || persisted.Usage == nil || persisted.Usage.InputTokens == nil || *persisted.Usage.InputTokens != 100 {
+		t.Fatalf("persisted profile and measurement metadata = %+v", persisted)
+	}
+
+	fullGrade := grade
+	fullGrade.PreflightContext = PreflightContextFull
+	fullGrade.HookPayload = &HookPayloadMetrics{Profile: PreflightContextFull, Bytes: 1, Characters: 1}
+	fullRecorded, err := Record(RecordOptions{ResultsRoot: resultsRoot, RunDate: "2026-09-12", Artifact: artifact}, fullGrade)
+	if err != nil {
+		t.Fatalf("full and compact profiles collided: %v", err)
+	}
+	if fullRecorded.ResultPath == recorded.ResultPath || !strings.Contains(filepath.Base(fullRecorded.ResultPath), "-treatment-4.json") {
+		t.Fatalf("full result path collided or lost compatibility: %s", fullRecorded.ResultPath)
+	}
+}
+
+func TestOutcomeBenchmarkPreflightContextValidationHappensBeforeOutput(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		condition string
+		profile   string
+		want      string
+	}{
+		{name: "control rejects profile", condition: ConditionControl, profile: PreflightContextFull, want: "only valid for treatment"},
+		{name: "treatment rejects unknown profile", condition: ConditionTreatment, profile: "minimal", want: "full or compact"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			target := filepath.Join(t.TempDir(), "target")
+			options := benchmarkPrepareOptions(target, test.condition, "codex", 1)
+			options.PreflightContext = test.profile
+			if _, err := Prepare(options); err == nil || !strings.Contains(err.Error(), test.want) {
+				t.Fatalf("Prepare() error = %v, want %q", err, test.want)
+			}
+			if _, err := os.Stat(target); !os.IsNotExist(err) {
+				t.Fatalf("invalid profile wrote target: %v", err)
+			}
+			if _, err := os.Stat(evaluationBaselinePath(target, FamilyBenchmark)); !os.IsNotExist(err) {
+				t.Fatalf("invalid profile wrote sidecar: %v", err)
+			}
+		})
+	}
+
+	t.Run("conformance rejects profile", func(t *testing.T) {
+		t.Parallel()
+		target := filepath.Join(t.TempDir(), "target")
+		_, err := Prepare(PrepareOptions{
+			CasesRoot: testCasesRoot(t), CaseID: "frontend-nextjs", Output: target,
+			Condition: ConditionConformance, Agent: "codex", PreflightContext: PreflightContextCompact,
+		})
+		if err == nil || !strings.Contains(err.Error(), "only valid for treatment") {
+			t.Fatalf("Prepare() error = %v, want treatment-only rejection", err)
+		}
+		if _, err := os.Stat(target); !os.IsNotExist(err) {
+			t.Fatalf("invalid conformance profile wrote target: %v", err)
+		}
+	})
+}
+
+func TestOutcomeBenchmarkTreatmentDefaultsToFullPreflightContext(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		name      string
+		requested string
+	}{
+		{name: "default"},
+		{name: "explicit", requested: PreflightContextFull},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			target := filepath.Join(t.TempDir(), "target")
+			options := benchmarkPrepareOptions(target, ConditionTreatment, "cursor", 1)
+			options.PreflightContext = test.requested
+			prepared, err := Prepare(options)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if prepared.PreflightContext != PreflightContextFull || prepared.HookPayload == nil || prepared.HookPayload.Profile != PreflightContextFull {
+				t.Fatalf("full treatment profile = %+v", prepared)
+			}
+		})
 	}
 }
 
@@ -62,6 +216,12 @@ func TestOutcomeBenchmarkControlAndTreatmentIsolation(t *testing.T) {
 	}
 	if control.Rubric != "" || treatment.Rubric != "" {
 		t.Fatalf("blind benchmark rubric leaked during preparation: control=%q treatment=%q", control.Rubric, treatment.Rubric)
+	}
+	if control.PreflightContext != "" || control.HookPayload != nil {
+		t.Fatalf("control contains treatment-only preflight metadata: %+v", control)
+	}
+	if treatment.PreflightContext != PreflightContextFull || treatment.HookPayload == nil || treatment.HookPayload.Profile != PreflightContextFull {
+		t.Fatalf("treatment omitted default preflight metadata: %+v", treatment)
 	}
 	for _, prepared := range []PrepareResult{control, treatment} {
 		if prepared.AgentVersion != "test-agent-1" || prepared.ModelVersion != "test-model-1" || prepared.ReasoningConfiguration != "high" || prepared.TrialNumber != 2 || prepared.SourceCommit == "" || prepared.Baseline == "" {

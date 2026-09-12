@@ -4,6 +4,15 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+### Added
+
+- Outcome benchmark preparation now accepts treatment-only `full` and `compact` preflight profiles and preserves the selected profile plus content-free hook payload measurements through baseline, grading, and immutable result metadata.
+- Added a neutral scoped bug-fix planning benchmark alongside the frontend onboarding case, plus a reproducible v0.11.1 full-versus-compact measurement protocol that keeps provider-reported token usage separate from payload bytes and characters.
+
+### Changed
+
+- Compact treatment result paths include the preflight profile so matched full and compact trials with the same date and trial number remain independently immutable; control, full-profile, and legacy result paths remain compatible.
+
 ## [0.11.1] - 2026-09-09
 
 ### Fixed

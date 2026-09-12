@@ -4,7 +4,7 @@ Repository Knowledge helps coding agents avoid stale architectural assumptions a
 
 It installs a shared evidence contract, repository-specific routing, and native lifecycle hooks for Codex, Claude Code, Antigravity IDE, and Cursor. Agents are directed to load the smallest relevant knowledge set, verify important claims against current source evidence, and reconcile documentation after implementation. Optional GitHub Actions and GitLab CI adapters make missing documentation-impact decisions visible when changes bypass an agent.
 
-> **Evidence status:** no causal outcome-benchmark trial has been published yet. The repository contains a reproducible control/treatment harness, but it does not currently claim a measured improvement in agent success, unsupported claims, duration, or token usage. See the [benchmark case](evals/benchmarks/frontend-onboarding/eval.json), [evaluation protocol](evals/README.md), and [raw-results directory](evals/results/README.md).
+> **Evidence status:** no causal outcome-benchmark trial has been published yet. The repository contains a reproducible control/treatment and full/compact measurement harness, but it does not currently claim a measured improvement in agent success, unsupported claims, duration, or token usage. See the [onboarding benchmark](evals/benchmarks/frontend-onboarding/eval.json), [scoped-work benchmark](evals/benchmarks/scoped-bugfix-plan/eval.json), [evaluation protocol](evals/README.md), and [raw-results directory](evals/results/README.md).
 
 **Try it:** install into a repository, run `doctor`, then start a new agent session. **Boundary:** Repository Knowledge makes evidence-first behavior cheaper and observable; it cannot guarantee that an agent complies with instructions or understands a repository correctly.
 
@@ -39,7 +39,7 @@ No outcome results are currently available. Consequently, no causal improvement 
 | Elapsed time | Not measured | Not measured | No claim |
 | Token usage | Not measured | Not measured | No claim |
 
-When trials exist, every successful and failed run must be stored with its source and case revisions, agent/model configuration, duration, token usage when available, deterministic result, blind semantic review, and preserved output artifact. Results use immutable paths under [`evals/results/`](evals/results/); the repository will link the corresponding raw records from this table instead of replacing them with a marketing summary.
+When trials exist, every successful and failed run must be stored with its source and case revisions, agent/model configuration, treatment preflight profile, hook payload measurements, duration, provider-attributed token usage when available, deterministic result, blind semantic review, and preserved output artifact. Hook bytes and characters are not tokens; only provider-reported usage supports an input-token claim. Results use immutable paths under [`evals/results/`](evals/results/); the repository will link the corresponding raw records from this table instead of replacing them with a marketing summary.
 
 Conformance results answer a different question—whether an agent follows the Repository Knowledge contract—and are not presented as causal product evidence.
 
@@ -68,7 +68,7 @@ Repository Knowledge makes correct repository behavior cheaper and observable; i
 - Diff-bound evidence receipts reject stale checks and incomplete documentation decisions when invoked, but they are not yet universal host-level stop hooks and cannot prevent an agent from making an unsupported pure-text completion claim.
 - `scan` and `rebuild` produce structural discovery data, not semantic documentation. An agent still has to inspect implementation and tests to explain behavior accurately.
 - CI validates whether a material diff has documentation or an explicit impact decision. It does not determine semantic correctness, rewrite documentation, or commit changes.
-- The current outcome benchmark has not been executed and does not support a performance claim.
+- The current outcome benchmarks have not been executed and do not support a performance claim.
 
 ## How it works
 
@@ -89,7 +89,7 @@ For documentation generation, ask the installed agent to inspect the complete re
 - [Architecture](docs/architecture.md) — policy boundaries, ownership, lifecycle behavior, release trust, and CI enforcement.
 - [Configuration and contract](docs/configuration.md) — repository metadata, local invariants, impact rules, and evidence precedence.
 - [Testing](docs/testing.md) — Go compatibility, workflow-security checks, conformance evaluations, and outcome benchmarks.
-- [Evaluation protocol](evals/README.md) — control/treatment preparation, blind semantic grading, immutable raw results, and causal limitations.
+- [Evaluation protocol](evals/README.md) — control/treatment and full/compact preparation, provider-attributed usage, blind semantic grading, immutable raw results, and causal limitations.
 - [Extension guide](docs/extension-guide.md) — adding deterministic detectors, adapters, or policy extensions without crossing ownership boundaries.
 - [Security policy](SECURITY.md) — supported versions and private vulnerability reporting.
 

@@ -94,12 +94,17 @@ go run ./cmd/repo-knowledge-eval prepare \
   --model-version gpt-5.6-sol \
   --reasoning high \
   --repository-knowledge-revision v0.11.1 \
+  --preflight-context full \
   --trial 1
 ```
 
-Run the printed prompt independently in each target, preserve each patch or output archive, and grade with `--family benchmark`. Do not expose the rubric or expected trace before the reviewer scores the output. Recording with `--results evals/results --run-date <YYYY-MM-DD> --duration <duration> --artifact <file>` uses exclusive-create semantics and accepts failed as well as successful trials. See [`evals/README.md`](../evals/README.md) for the complete paired workflow and result schema.
+Treatment preparation accepts `--preflight-context full` or `compact` and defaults to `full`; control and conformance preparation reject the option before writing output. The selected profile and content-free hook payload bytes, characters, generation milliseconds, artifact count, and route count survive the adjacent baseline sidecar, grading, and immutable result. These payload measurements are not tokens. Provider-reported input, output, cached, and total tokens remain separately source-attributed end-to-end measurements.
 
-Harness tests verify that invalid or missing conditions write nothing, control has no toolkit assets, treatment installs only the requested adapter, fixture application files are identical, metadata survives grading, protected-source checks run under both conditions, failed trials can be recorded, and existing result paths cannot be overwritten. A deterministic pass remains pending until semantic status, score, and reviewer are supplied explicitly.
+Run the printed prompt independently in each target, preserve each patch or output archive, and grade with `--family benchmark`. Do not expose the rubric or expected trace before the reviewer scores the output. Recording with `--results evals/results --run-date <YYYY-MM-DD> --duration <duration> --artifact <file>` uses exclusive-create semantics and accepts failed as well as successful trials. Compact treatment result names include `compact` to prevent matched trials from colliding while existing full-profile paths remain compatible. See [`evals/README.md`](../evals/README.md) for the complete paired workflow, exact v0.11.1 full-versus-compact protocol, and result schema.
+
+Harness tests verify that invalid or missing conditions and invalid/control-only preflight profiles write nothing, control has no toolkit assets, treatment installs only the requested adapter, fixture application files are identical, profile and payload metadata survive preparation through recording, protected-source checks run under both conditions, failed trials can be recorded, and existing result paths cannot be overwritten. A deterministic pass remains pending until semantic status, score, and reviewer are supplied explicitly.
+
+Before progressive-disclosure prompt changes, establish the released v0.11.1 baseline with three fresh Codex treatment trials per profile on `frontend-onboarding` and three per profile on `scoped-bugfix-plan`. Match the case/source revision, agent host, model, reasoning configuration, permissions, neutral prompt, and trial number; alternate or randomize order. Record failures, provider usage, duration, deterministic results, and blind semantic results. A smaller hook payload is only a payload result; the optimization target must be evaluated against provider-reported input tokens without deterministic or semantic regression.
 
 ## Disposable target smoke test
 

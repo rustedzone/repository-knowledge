@@ -52,7 +52,7 @@ List neutral benchmarks:
 go run ./cmd/repo-knowledge-eval list --family benchmark
 ```
 
-Prepare a paired trial with the same agent, model, reasoning configuration, Repository Knowledge revision, and trial number:
+Prepare a control/treatment pair with the same agent, model, reasoning configuration, Repository Knowledge revision, and trial number:
 
 ```bash
 go run ./cmd/repo-knowledge-eval prepare \
@@ -77,12 +77,15 @@ go run ./cmd/repo-knowledge-eval prepare \
   --model-version gpt-5.6-sol \
   --reasoning high \
   --repository-knowledge-revision v0.11.1 \
+  --preflight-context full \
   --trial 1
 ```
 
 Use the released version being evaluated, or replace `v0.11.1` with the exact candidate commit for an unreleased build. Keep that value identical across the pair.
 
-`control` copies only the fixture into the target; it does not install policy, rules, skills, hooks, a toolkit manifest, or an in-target experiment marker. For both conditions, the harness writes baseline metadata to the adjacent `<target>.repo-knowledge-eval-baseline.json` sidecar. `treatment` copies the same fixture and installs only the requested adapter plus the shared toolkit assets that adapter requires. The sidecar records the condition, case/source revisions, agent and host version, model version, reasoning configuration, Repository Knowledge revision, and trial number. Missing or invalid conditions fail before the output directory or sidecar is created.
+`control` copies only the fixture into the target; it does not install policy, rules, skills, hooks, a toolkit manifest, or an in-target experiment marker. For both conditions, the harness writes baseline metadata to the adjacent `<target>.repo-knowledge-eval-baseline.json` sidecar. `treatment` copies the same fixture and installs only the requested adapter plus the shared toolkit assets that adapter requires. Treatment accepts `--preflight-context full` or `--preflight-context compact` and defaults to `full` for backward compatibility. Control and conformance preparation reject the option because Repository Knowledge is not the experimental input in those conditions.
+
+The sidecar records the condition, case/source revisions, agent and host version, model version, reasoning configuration, Repository Knowledge revision, trial number, selected treatment profile, and content-free hook payload measurements. Hook payload measurements are bytes, characters, generation milliseconds, artifact count, and route count; they are not token estimates. Missing or invalid conditions and profiles fail before the output directory or sidecar is created.
 
 Run the exact printed neutral prompt in each target. Do not show the benchmark rubric or expected trace to the agent. Randomize or alternate condition order when conducting multiple trials to reduce ordering effects.
 
@@ -119,16 +122,25 @@ go run ./cmd/repo-knowledge-eval grade \
   --artifact /tmp/frontend-onboarding-control-1.tar.gz
 ```
 
-Omit the semantic flags until blind review is complete. Use only provider-reported token counts and name their source; do not convert characters, bytes, or elapsed time into estimated tokens. Cached tokens are recorded separately and remain part of provider input accounting, so `total_tokens` equals input plus output rather than input plus output plus cached. Use `--token-source unavailable` when the host exposes no usage, with no numeric token flags. The legacy `--tokens` total remains accepted for old automation. `--results` requires the date, duration, and preserved artifact. It writes:
+Omit the semantic flags until blind review is complete. Use only provider-reported token counts and name their source; do not convert characters, bytes, or elapsed time into estimated tokens. Cached tokens are recorded separately and remain part of provider input accounting, so `total_tokens` equals input plus output rather than input plus output plus cached. Use `--token-source unavailable` when the host exposes no usage, with no numeric token flags. The legacy `--tokens` total remains accepted for old automation. `--results` requires the date, duration, and preserved artifact. Control, full treatment, and legacy treatment records use:
 
 ```text
 evals/results/<benchmark>/<agent>/<date>-<condition>-<trial>.json
 evals/results/<benchmark>/<agent>/<date>-<condition>-<trial>-artifact.<ext>
 ```
 
+Compact treatment results include the selected profile in the immutable filename:
+
+```text
+evals/results/<benchmark>/<agent>/<date>-treatment-compact-<trial>.json
+evals/results/<benchmark>/<agent>/<date>-treatment-compact-<trial>-artifact.<ext>
+```
+
+This prevents matched full and compact results from colliding while preserving existing full-profile result paths.
+
 Both files use exclusive-create semantics. Existing results cannot be overwritten through the harness. Commit every attempted trial, including deterministic or semantic failures; corrections use a new trial number rather than rewriting history.
 
-Result metadata records condition, agent and host version, model version, reasoning configuration, Repository Knowledge version or commit, source commit, case revision, trial number, duration, source-attributed token usage when available, preserved artifact, deterministic checks, semantic score/status, and reviewer. Absolute disposable-target paths are removed from committed records.
+Result metadata records condition, agent and host version, model version, reasoning configuration, Repository Knowledge version or commit, source commit, case revision, trial number, selected treatment profile, hook payload measurements, duration, source-attributed token usage when available, preserved artifact, deterministic checks, semantic score/status, and reviewer. Absolute disposable-target paths are removed from committed records.
 
 Use [the evaluation report template](report-template.md) to compare a control/treatment pair. Compare paired outcomes rather than treating conformance success as product-effect evidence.
 
@@ -138,3 +150,48 @@ Use [the evaluation report template](report-template.md) to compare a control/tr
 - For outcome benchmarks, compare control and treatment deterministic success, blind semantic score, duration, and token usage for the same case revision and run configuration.
 - Do not pool trials across different source commits, case revisions, models, reasoning settings, or allowed-change boundaries without reporting the strata.
 - Do not convert deterministic success into semantic success automatically.
+
+## Full-versus-compact baseline protocol
+
+Use this protocol to measure prompt-context changes separately from the control/treatment product experiment. Start with Codex and the released `v0.11.1` binary before refactoring prompt assets.
+
+1. Run `frontend-onboarding` three times with treatment `full` and three times with treatment `compact`.
+2. Repeat with `scoped-bugfix-plan`, which exercises ordinary scoped repository planning rather than documentation generation.
+3. For each matched full/compact trial, pin the same case revision, fixture source commit, neutral prompt, agent and host version, model, reasoning configuration, permissions, Repository Knowledge revision, and trial number.
+4. Use a fresh session for every run and alternate or randomize profile order. Do not let an earlier run's conversation or generated output enter a later target.
+5. Record the hook payload metrics from preparation and the provider-reported input, output, cached, and total token counts from the end-to-end run. Record duration, deterministic outcome, blind semantic score, and every failed trial too.
+6. Compare medians only within matching benchmark/run strata. A smaller hook payload demonstrates less injected text; only lower provider-reported input tokens demonstrate lower end-to-end input-token usage.
+
+For example, create matched treatment targets with:
+
+```bash
+go run ./cmd/repo-knowledge-eval prepare \
+  --family benchmark \
+  --case frontend-onboarding \
+  --condition treatment \
+  --preflight-context full \
+  --output /tmp/frontend-onboarding-full-1 \
+  --agent codex \
+  --agent-version <exact-host-version> \
+  --model-version <exact-model-version> \
+  --reasoning <exact-reasoning-setting> \
+  --repository-knowledge-revision v0.11.1 \
+  --trial 1
+
+go run ./cmd/repo-knowledge-eval prepare \
+  --family benchmark \
+  --case frontend-onboarding \
+  --condition treatment \
+  --preflight-context compact \
+  --output /tmp/frontend-onboarding-compact-1 \
+  --agent codex \
+  --agent-version <exact-host-version> \
+  --model-version <exact-model-version> \
+  --reasoning <exact-reasoning-setting> \
+  --repository-knowledge-revision v0.11.1 \
+  --trial 1
+```
+
+The harness prepares, measures, grades, and records trials but deliberately does not launch an agent or invent provider usage. Capture provider counts from the host's authoritative run report; when they are unavailable, record `--token-source unavailable` without numeric values.
+
+The proposed optimization gate is at least 20% lower median provider-reported input-token usage than the v0.11.1 `full` baseline, with no deterministic regression, no decrease in semantic pass rate, no increase in unsupported or stale implementation claims, and no more than 10% median end-to-end latency regression. These are acceptance targets for later measurements, not current results or product claims.

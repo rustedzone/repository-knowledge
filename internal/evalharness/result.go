@@ -44,6 +44,16 @@ func Record(options RecordOptions, result GradeResult) (RecordResult, error) {
 	}
 	directory := filepath.Join(resultsRoot, result.CaseID, result.Agent)
 	stem := fmt.Sprintf("%s-%s-%d", options.RunDate, result.Condition, result.TrialNumber)
+	if result.Condition == ConditionTreatment && result.PreflightContext != "" {
+		if result.PreflightContext != PreflightContextFull && result.PreflightContext != PreflightContextCompact {
+			return recorded, fmt.Errorf("treatment preflight context must be full or compact")
+		}
+		if result.PreflightContext == PreflightContextCompact {
+			stem = fmt.Sprintf("%s-%s-%s-%d", options.RunDate, result.Condition, result.PreflightContext, result.TrialNumber)
+		}
+	} else if result.Condition != ConditionTreatment && result.PreflightContext != "" {
+		return recorded, fmt.Errorf("preflight context is only valid for treatment results")
+	}
 	resultPath := filepath.Join(directory, stem+".json")
 	artifactPath := filepath.Join(directory, stem+"-artifact"+artifactExtension(options.Artifact))
 	for _, path := range []string{resultPath, artifactPath} {

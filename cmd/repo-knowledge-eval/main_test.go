@@ -36,3 +36,39 @@ func TestGradeCLIRecordsSourceAttributedUsage(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPrepareCLIAcceptsTreatmentPreflightContext(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "target")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{
+		"prepare", "--family", "benchmark", "--benchmarks", filepath.Join("..", "..", "evals", "benchmarks"),
+		"--case", "frontend-onboarding", "--condition", "treatment", "--output", target,
+		"--agent", "codex", "--agent-version", "test", "--model-version", "test", "--reasoning", "test",
+		"--repository-knowledge-revision", "v0.11.1", "--trial", "1", "--preflight-context", "compact", "--json",
+	}, &stdout, &stderr)
+	if code != 0 {
+		t.Fatalf("prepare code=%d stderr=%q", code, stderr.String())
+	}
+	if !strings.Contains(stdout.String(), `"preflight_context": "compact"`) || !strings.Contains(stdout.String(), `"hook_payload"`) {
+		t.Fatalf("prepare output omitted profile metadata: %q", stdout.String())
+	}
+}
+
+func TestPrepareCLIRejectsControlPreflightContextBeforeWriting(t *testing.T) {
+	target := filepath.Join(t.TempDir(), "target")
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	code := run([]string{
+		"prepare", "--family", "benchmark", "--benchmarks", filepath.Join("..", "..", "evals", "benchmarks"),
+		"--case", "frontend-onboarding", "--condition", "control", "--output", target,
+		"--agent", "codex", "--agent-version", "test", "--model-version", "test", "--reasoning", "test",
+		"--repository-knowledge-revision", "v0.11.1", "--trial", "1", "--preflight-context", "full",
+	}, &stdout, &stderr)
+	if code != 2 || !strings.Contains(stderr.String(), "only valid for treatment") {
+		t.Fatalf("prepare code=%d stderr=%q", code, stderr.String())
+	}
+	if _, err := os.Stat(target); !os.IsNotExist(err) {
+		t.Fatalf("invalid control profile wrote target: %v", err)
+	}
+}

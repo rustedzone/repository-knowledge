@@ -24,10 +24,6 @@ func Prepare(options PrepareOptions) (PrepareResult, error) {
 	if err != nil {
 		return result, err
 	}
-	preflightContext, err := preparePreflightContext(spec.Family, condition, options.PreflightContext)
-	if err != nil {
-		return result, err
-	}
 	if options.TrialNumber == 0 {
 		options.TrialNumber = 1
 	}
@@ -80,23 +76,12 @@ func Prepare(options PrepareOptions) (PrepareResult, error) {
 	if err := copyTree(fixture, output); err != nil {
 		return result, fmt.Errorf("copy fixture: %w", err)
 	}
-	var hookPayload *HookPayloadMetrics
 	if condition != ConditionControl {
 		if _, err := toolkit.Install(toolkit.InstallOptions{
 			Target: output, Source: "evaluation-harness", Ref: options.RepositoryKnowledgeRevision,
-			AgentAdapters: []string{options.Agent}, PreflightContext: preflightContext,
+			AgentAdapters: []string{options.Agent},
 		}); err != nil {
 			return result, fmt.Errorf("install repository-knowledge into fixture: %w", err)
-		}
-		if spec.Family == FamilyBenchmark {
-			metrics, err := toolkit.MeasureHookContext(output, options.Agent)
-			if err != nil {
-				return result, fmt.Errorf("measure hook payload: %w", err)
-			}
-			hookPayload = &HookPayloadMetrics{
-				Profile: metrics.Profile, Bytes: metrics.Bytes, Characters: metrics.Characters,
-				GenerationMillis: metrics.GenerationMillis, ArtifactCount: metrics.ArtifactCount, RouteCount: metrics.RouteCount,
-			}
 		}
 	}
 	files, err := hashRepository(output)
@@ -109,7 +94,7 @@ func Prepare(options PrepareOptions) (PrepareResult, error) {
 		Agent: options.Agent, AgentVersion: options.AgentVersion, ModelVersion: options.ModelVersion,
 		ReasoningConfiguration:      options.ReasoningConfiguration,
 		RepositoryKnowledgeRevision: options.RepositoryKnowledgeRevision,
-		TrialNumber:                 options.TrialNumber, PreflightContext: preflightContext, HookPayload: hookPayload, Files: files,
+		TrialNumber:                 options.TrialNumber, Files: files,
 	}
 	data, err := json.MarshalIndent(baseline, "", "  ")
 	if err != nil {
@@ -138,29 +123,8 @@ func Prepare(options PrepareOptions) (PrepareResult, error) {
 		Agent: options.Agent, AgentVersion: options.AgentVersion,
 		ModelVersion: options.ModelVersion, ReasoningConfiguration: options.ReasoningConfiguration,
 		RepositoryKnowledgeRevision: options.RepositoryKnowledgeRevision, TrialNumber: options.TrialNumber,
-		PreflightContext: preflightContext, HookPayload: hookPayload,
 		Prompt: strings.TrimSpace(string(prompt)), Rubric: rubric,
 	}, nil
-}
-
-func preparePreflightContext(family, condition, requested string) (string, error) {
-	requested = strings.TrimSpace(requested)
-	if condition != ConditionTreatment {
-		if requested != "" {
-			return "", fmt.Errorf("--preflight-context is only valid for treatment outcome benchmarks")
-		}
-		return "", nil
-	}
-	if family != FamilyBenchmark {
-		return "", fmt.Errorf("--preflight-context is only valid for treatment outcome benchmarks")
-	}
-	if requested == "" {
-		return PreflightContextFull, nil
-	}
-	if requested != PreflightContextFull && requested != PreflightContextCompact {
-		return "", fmt.Errorf("--preflight-context must be full or compact")
-	}
-	return requested, nil
 }
 
 func evaluationBaselinePath(target, family string) string {

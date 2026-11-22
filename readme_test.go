@@ -4,40 +4,38 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
 
-func TestREADMELeadsWithOutcomesAndEvidence(t *testing.T) {
+func TestREADMEExplainsUsageEvidenceAndLimits(t *testing.T) {
 	t.Parallel()
 	data, err := os.ReadFile("README.md")
 	if err != nil {
 		t.Fatal(err)
 	}
 	readme := string(data)
-	requiredOrder := []string{
-		"Repository Knowledge helps coding agents avoid stale architectural assumptions and makes documentation-impact decisions visible.",
-		"## 60-second hostile demonstration",
-		"## Measured results",
-		"## Three-command quickstart",
-		"## Honest boundary",
-		"## How it works",
-		"## Detailed documentation",
+	required := []string{
+		"# Repository Knowledge",
+		"repo-knowledge install --target .",
+		"repo-knowledge doctor --target .",
+		"evals/benchmarks/frontend-onboarding/eval.json",
+		"policy/contract.json",
+		"docs/installation.md",
+		"documentation-impact",
 	}
-	last := -1
-	for _, section := range requiredOrder {
-		index := strings.Index(readme, section)
-		if index < 0 {
-			t.Errorf("README is missing %q", section)
-			continue
+	for _, claim := range required {
+		if !strings.Contains(readme, claim) {
+			t.Errorf("README is missing %q", claim)
 		}
-		if index <= last {
-			t.Errorf("README section %q is out of order", section)
-		}
-		last = index
 	}
-	if !strings.Contains(readme, "does not guarantee agent compliance or understanding") {
+	if !regexp.MustCompile(`(?i)\b(?:cannot|does not) guarantee\b`).MatchString(readme) {
 		t.Error("README must state the product's non-guarantee")
+	}
+	firstSection := strings.SplitN(readme, "## ", 2)[0]
+	if !strings.Contains(firstSection, "Evidence status:") {
+		t.Error("README must disclose outcome-evidence status before the detailed sections")
 	}
 }
 
@@ -61,8 +59,7 @@ func TestREADMEEvidenceStatusMatchesCommittedResults(t *testing.T) {
 		t.Fatal(err)
 	}
 	readme := string(data)
-	noResultsClaim := strings.Contains(readme, "no causal outcome-benchmark trial has been published yet") &&
-		strings.Contains(readme, "No outcome results are currently available")
+	noResultsClaim := regexp.MustCompile(`(?i)\bno outcome results\b.{0,40}\b(?:published|available)\b`).MatchString(readme)
 	if resultCount == 0 && !noResultsClaim {
 		t.Error("README must disclose that no outcome results are published")
 	}

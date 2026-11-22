@@ -1,53 +1,31 @@
 # Repository Knowledge
 
-Repository Knowledge helps coding agents avoid stale architectural assumptions and makes documentation-impact decisions visible.
+**Give coding agents a reliable path from documentation to code.**
 
-It installs a shared evidence contract, repository-specific routing, and native lifecycle hooks for Codex, Claude Code, Antigravity IDE, and Cursor. Agents are directed to load the smallest relevant knowledge set, verify important claims against current source evidence, and reconcile documentation after implementation. Optional GitHub Actions and GitLab CI adapters make missing documentation-impact decisions visible when changes bypass an agent.
+Repository Knowledge gives Codex, Claude Code, Antigravity IDE, and Cursor a shared way to find relevant documentation, check important claims against current evidence, and account for documentation when code changes. A small Go CLI installs the contract and native agent hooks. Optional GitHub Actions and GitLab CI adapters check documentation-impact decisions on material diffs.
 
-> **Evidence status:** no causal outcome-benchmark trial has been published yet. The repository contains a reproducible control/treatment harness, but it does not currently claim a measured improvement in agent success, unsupported claims, duration, or token usage. See the [benchmark case](evals/benchmarks/frontend-onboarding/eval.json), [evaluation protocol](evals/README.md), and [raw-results directory](evals/results/README.md).
+[Get started](#get-started) · [See the example](#a-repository-that-tries-to-mislead-the-agent) · [How it works](#how-it-works) · [Read the docs](#documentation)
 
-**Try it:** install into a repository, run `doctor`, then start a new agent session. **Boundary:** Repository Knowledge makes evidence-first behavior cheaper and observable; it cannot guarantee that an agent complies with instructions or understands a repository correctly.
+> **Evidence status:** No outcome results have been published. The [benchmark](evals/benchmarks/frontend-onboarding/eval.json) is ready for control/treatment trials, but it does not establish a measured improvement.
 
-## 60-second hostile demonstration
+## The problem it solves
 
-The committed frontend fixture presents an agent with several plausible but contradictory signals:
+An agent can read a convincing `CLAUDE.md`, then confidently document the wrong React version, invent a live API integration, or miss a permission check. More context alone does not settle which source is current.
 
-| Signal | What the repository actually establishes |
+Repository Knowledge gives the agent a route to the right files and an evidence order: use documentation to navigate, then verify behavior in code, tests, schemas, and effective configuration. It also makes the documentation decision visible at the end of a change.
+
+| You need | Repository Knowledge provides |
 | --- | --- |
-| `CLAUDE.md` says React 18 | `package.json` declares React `^19.1.1`; `package-lock.json` resolves React `19.1.1`. |
-| `CLAUDE.md` says intelligence metrics come from a live Pega API | `IntelligencePage` imports `src/data/intelligence.json` directly. |
-| A protected route looks like ordinary page composition | `ProtectedLayout` calls `requireSession`, which redirects requests without `dashboard_session`. |
-| A page is inside the protected layout | `IntelligencePage` still checks the `intelligence:read` permission through `useCheckPermission`. |
+| Relevant context without loading the whole repository | A documentation index, repository metadata, and native preflight hooks for the selected agent. |
+| Claims you can trace | A shared evidence contract and a workflow for checking claims against their authoritative sources. |
+| Documentation that follows code changes | Diff-bound impact decisions, with optional CI validation. |
+| Safer updates | Toolkit-managed files can be refreshed while consumer-owned docs, metadata, local rules, ADRs, scan state, and impact acknowledgments are preserved. |
 
-The neutral task asks an agent to improve onboarding documentation without naming Repository Knowledge. It must reject the stale prose, trace the session and permission boundaries, explain the form and BFF flow, preserve application files, and cite current evidence.
+## Get started
 
-| Condition | Preparation | Published result |
-| --- | --- | --- |
-| Control | The fixture alone | Not run or published. |
-| Treatment | The same fixture plus the selected Repository Knowledge adapter | Not run or published. |
+Download the matching executable from the pinned [v0.11.1 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.11.1), verify its checksum and GitHub attestation, and put it on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) has platform-specific instructions. You also need the selected agent installed.
 
-The case definition, prompt, objective checks, blind rubric, and expected trace are committed under [`evals/benchmarks/frontend-onboarding/`](evals/benchmarks/frontend-onboarding/). This is a demonstration of a falsifiable test, not evidence that the treatment wins.
-
-## Measured results
-
-No outcome results are currently available. Consequently, no causal improvement is claimed.
-
-| Primary measure | Control | Treatment | Observed difference |
-| --- | ---: | ---: | ---: |
-| First-attempt success (`pass@1`) | Not measured | Not measured | No claim |
-| Unsupported architectural claims | Not measured | Not measured | No claim |
-| Elapsed time | Not measured | Not measured | No claim |
-| Token usage | Not measured | Not measured | No claim |
-
-When trials exist, every successful and failed run must be stored with its source and case revisions, agent/model configuration, duration, token usage when available, deterministic result, blind semantic review, and preserved output artifact. Results use immutable paths under [`evals/results/`](evals/results/); the repository will link the corresponding raw records from this table instead of replacing them with a marketing summary.
-
-Conformance results answer a different question—whether an agent follows the Repository Knowledge contract—and are not presented as causal product evidence.
-
-## Three-command quickstart
-
-First, download the pinned [v0.11.1 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.11.1), verify its checksum and attestation, and put the executable on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) provides platform and verification details.
-
-From the repository you want Codex to understand:
+From the repository you want Codex to work in:
 
 ```bash
 repo-knowledge install --target . --agent codex --source https://github.com/rustedzone/repository-knowledge --ref v0.11.1
@@ -55,64 +33,68 @@ repo-knowledge doctor --target .
 codex
 ```
 
-The third command starts a fresh Codex session so its project hook can load the repository preflight. Review or trust the hook if Codex asks. The first repository-related progress update should say `Repository knowledge preflight: loaded` and name the selected documentation routes.
+Start a **new** agent session so the project hook can load its preflight. Review or trust the hook if the host asks. The agent's first repository-related update should say `Repository knowledge preflight: loaded` and name the documentation routes it selected.
 
-Use `--agent claude-code`, `--agent antigravity-ide`, or `--agent cursor` for another host. Repeat `--agent` for a subset, or use `--all-agents` to install every supported adapter; then start a new session in the selected host.
+For another host, set `--agent` to `claude-code`, `antigravity-ide`, or `cursor`, then open a new session in that host. Repeat `--agent` to select several hosts, or use `--all-agents` to install all supported adapters. See [agent selection and hook behavior](docs/installation.md#install-into-a-repository).
 
-## Honest boundary
+To ask for human-readable documentation after installation, try:
 
-Repository Knowledge makes correct repository behavior cheaper and observable; it does not guarantee agent compliance or understanding.
+> Use repository-knowledge to document this repository. Trace each material capability through its entry point, rules, data or external boundaries, failure paths, and tests. Ground current-state claims in source evidence and route the resulting guides from `docs/index.md`.
 
-- Documentation is routing and intent evidence, not unquestionable truth. Current runtime behavior, tests, schemas, migrations, effective configuration, and implementation take precedence for their respective claims.
-- Native hooks are activation guardrails. A host may require trust, may disable hooks, or may surface a failed hook without blocking the session. Any supported agent can opt into `--agent-preflight AGENT=strict` to deny repository tool calls until routed knowledge is activated; that still does not prove the model understood the material or prevent a pure-text response.
-- Diff-bound evidence receipts reject stale checks and incomplete documentation decisions when invoked, but they are not yet universal host-level stop hooks and cannot prevent an agent from making an unsupported pure-text completion claim.
-- `scan` and `rebuild` produce structural discovery data, not semantic documentation. An agent still has to inspect implementation and tests to explain behavior accurately.
-- CI validates whether a material diff has documentation or an explicit impact decision. It does not determine semantic correctness, rewrite documentation, or commit changes.
-- The current outcome benchmark has not been executed and does not support a performance claim.
+`scan` and `rebuild` can help discover structure, but they do not write the semantic guides described in that request.
+
+## A repository that tries to mislead the agent
+
+The [frontend onboarding benchmark](evals/benchmarks/frontend-onboarding/eval.json) includes plausible instructions that conflict with the fixture's implementation:
+
+| Tempting claim | What current evidence shows |
+| --- | --- |
+| [`CLAUDE.md`](evals/cases/frontend-nextjs/fixture/CLAUDE.md) says React 18. | [`package.json`](evals/cases/frontend-nextjs/fixture/package.json) declares React `^19.1.1`; the lockfile resolves `19.1.1`. |
+| The same file says intelligence metrics come from a live Pega API. | [`IntelligencePage`](<evals/cases/frontend-nextjs/fixture/src/app/(protected)/intelligence/page.tsx>) imports static JSON. |
+| A protected route appears to be ordinary page composition. | [`ProtectedLayout`](<evals/cases/frontend-nextjs/fixture/src/app/(protected)/layout.tsx>) calls `requireSession` before rendering. |
+| The protected layout seems sufficient for access control. | The intelligence page also checks `intelligence:read` through `useCheckPermission`. |
+
+The neutral task asks an agent to improve onboarding docs, trace the session and permission boundaries, explain the form and BFF flow, and preserve application files. The [prompt](evals/benchmarks/frontend-onboarding/prompt.md), [objective checks](evals/benchmarks/frontend-onboarding/eval.json), and [blind rubric](evals/benchmarks/frontend-onboarding/rubric.md) make the comparison reproducible.
+
+There is no measured claim for first-attempt success, unsupported claims, elapsed time, or token use. The [evaluation protocol](evals/README.md) distinguishes contract conformance from causal outcomes; published trials will be linked from the [raw-results directory](evals/results/README.md).
 
 ## How it works
 
-Repository Knowledge applies one versioned contract through two independent funnels:
-
 ```text
-prompt -> native hook -> routed knowledge -> verified change -> documentation reconciliation
-diff   -> CI adapter  -> documentation-impact validation -> report/pass/fail
+agent task -> native hook -> routed knowledge -> source verification -> change -> documentation reconciliation
+code diff   -> CI adapter  -> documentation-impact validation -> report
 ```
 
-The Go executable installs the shared policy, schemas, repository defaults, and only the selected agent adapters. It does not run as a daemon or inspect prompt transcripts. Toolkit updates replace toolkit-managed assets while preserving consumer-owned documentation, local rules, repository metadata, ADRs, scan state, and impact acknowledgments.
+The versioned [contract](policy/contract.json) defines evidence precedence, claim states, ownership, and documentation-impact outcomes. The installed [skill](skills/repository-knowledge/SKILL.md) tells the agent how to apply that contract. The Go CLI handles deterministic installation, inspection, and validation; it does not run as a daemon or read prompt transcripts.
 
-For documentation generation, ask the installed agent to inspect the complete repository and produce evidence-backed, implementation-ready guides. A scan or generated file inventory is only a discovery input. The [documentation-generation workflow](skills/repository-knowledge/references/documentation-generation.md) requires concrete behavioral traces, rules and failure paths, source-derived examples, a curated `docs/index.md`, and verified capability routes.
+Native hooks load bounded repository context at session or invocation time. By default they are observational: host trust settings or disabled hooks can prevent them from running. An opt-in strict preflight can gate repository tool calls until the agent selects routes and activates a workflow. Diff-bound evidence receipts can verify that checks and documentation decisions match the current worktree when invoked. See the [architecture guide](docs/architecture.md#prompt-driven-lifecycle) for the exact host and enforcement boundaries.
 
-## Detailed documentation
+The toolkit can help agents verify claims; it cannot guarantee that an agent reads, understands, or follows the evidence. CI checks whether a material diff has documentation or an explicit impact decision. It does not judge the semantic accuracy of the docs or commit changes for you.
 
-- [Installation and agent selection](docs/installation.md) — binary verification, individual and all-agent installation, native hooks, updates, missing-binary recovery, and GitHub/GitLab CI.
-- [Architecture](docs/architecture.md) — policy boundaries, ownership, lifecycle behavior, release trust, and CI enforcement.
-- [Configuration and contract](docs/configuration.md) — repository metadata, local invariants, impact rules, and evidence precedence.
-- [Testing](docs/testing.md) — Go compatibility, workflow-security checks, conformance evaluations, and outcome benchmarks.
-- [Evaluation protocol](evals/README.md) — control/treatment preparation, blind semantic grading, immutable raw results, and causal limitations.
-- [Extension guide](docs/extension-guide.md) — adding deterministic detectors, adapters, or policy extensions without crossing ownership boundaries.
-- [Security policy](SECURITY.md) — supported versions and private vulnerability reporting.
+## Documentation
 
-## Command reference
-
-| Command | Outcome |
+| Guide | Start here for |
 | --- | --- |
-| `install` | Install the shared bundle and selected prompt adapters; `--all-agents` selects every supported adapter. |
-| `update` | Refresh toolkit-owned files while preserving consumer-owned knowledge. |
-| `doctor` | Validate configuration, binary compatibility, managed files, and native hooks. |
-| `scan` | Generate structural discovery state and capability leads. |
-| `audit` | Report missing routes, broken index links, stale scans, and optional diff gaps. |
-| `rebuild` | Propose or apply the optional generated structural inventory. |
-| `impact` | Classify a diff and calculate its material-path fingerprint. |
-| `acknowledge` | Record a documentation-impact decision bound to that fingerprint. |
-| `validate-doc-impact` | Apply advisory, acknowledgment, or explicitly mapped enforcement. |
-| `hook-context` | Emit full or compact bounded preflight context; `--metrics` emits content-free size and generation measurements. |
-| `preflight-activate` | Activate a strict token with selected routes and the `standard` or `scoped` workflow. |
-| `evidence-run` | Run an explicit validation command and bind its result digest to the current worktree content. |
-| `evidence-report` | Require current successful checks, source evidence, and a documentation-impact decision before completion. |
+| [Installation](docs/installation.md) | Release verification, agent selection, native hooks, updates, and CI setup. |
+| [Architecture](docs/architecture.md) | Contract boundaries, lifecycle behavior, ownership, and release trust. |
+| [Configuration and contract](docs/configuration.md) | Repository metadata, local rules, and evidence precedence. |
+| [Testing](docs/testing.md) | Go checks, security checks, conformance evaluation, and outcome benchmarks. |
+| [Evaluation protocol](evals/README.md) | Control/treatment setup, blind review, and raw results. |
+| [Extension guide](docs/extension-guide.md) | Adding detectors, adapters, or policy extensions. |
+| [Security policy](SECURITY.md) | Supported versions and vulnerability reporting. |
 
-See the [installation guide](docs/installation.md) for complete usage and the [architecture guide](docs/architecture.md) for ownership and safety boundaries.
+## CLI at a glance
+
+| Command | Purpose |
+| --- | --- |
+| `install`, `update`, `doctor` | Set up or refresh selected adapters, then check the installation. |
+| `scan`, `audit`, `rebuild` | Discover repository structure, find knowledge gaps, and propose a generated inventory. |
+| `impact`, `acknowledge`, `validate-doc-impact` | Classify changes and record or validate documentation-impact decisions. |
+| `hook-context`, `preflight-activate` | Supply agent context and activate an optional strict session. |
+| `evidence-run`, `evidence-report` | Bind checks, source references, and documentation decisions to current worktree content. |
+
+The [installation guide](docs/installation.md) covers flags and workflows in detail.
 
 ## License
 
-Repository Knowledge is licensed under the [Apache License 2.0](LICENSE).
+Apache License 2.0. See [LICENSE](LICENSE).

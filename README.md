@@ -6,6 +6,8 @@ Repository Knowledge gives Codex, Claude Code, Antigravity IDE, and Cursor a sha
 
 [Get started](#get-started) · [See the example](#a-repository-that-tries-to-mislead-the-agent) · [How it works](#how-it-works) · [Read the docs](#documentation)
 
+> **Evidence status:** No outcome results have been published. The [benchmark](evals/benchmarks/frontend-onboarding/eval.json) is ready for control/treatment trials, but it does not establish a measured improvement.
+
 ## The problem it solves
 
 An agent can read a convincing `CLAUDE.md`, then confidently document the wrong React version, invent a live API integration, or miss a permission check. More context alone does not settle which source is current.
@@ -54,7 +56,7 @@ The [frontend onboarding benchmark](evals/benchmarks/frontend-onboarding/eval.js
 
 The neutral task asks an agent to improve onboarding docs, trace the session and permission boundaries, explain the form and BFF flow, and preserve application files. The [prompt](evals/benchmarks/frontend-onboarding/prompt.md), [objective checks](evals/benchmarks/frontend-onboarding/eval.json), and [blind rubric](evals/benchmarks/frontend-onboarding/rubric.md) make the comparison reproducible.
 
-**Evidence status:** no control/treatment outcome trials have been published. There is no measured claim for first-attempt success, unsupported claims, elapsed time, or token use. The [evaluation protocol](evals/README.md) distinguishes contract conformance from causal outcomes; published trials will be linked from the [raw-results directory](evals/results/README.md).
+There is no measured claim for first-attempt success, unsupported claims, elapsed time, or token use. The [evaluation protocol](evals/README.md) distinguishes contract conformance from causal outcomes; published trials will be linked from the [raw-results directory](evals/results/README.md).
 
 ## How it works
 

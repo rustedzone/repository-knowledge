@@ -4,6 +4,20 @@ All notable changes follow Keep a Changelog. Versions follow Semantic Versioning
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-28
+
+### Added
+
+- Optional, consumer-owned semantic coverage reports with capability traces, explicit gaps, source-file fingerprints, and a toolkit-managed JSON Schema.
+- `coverage-check` and `coverage-stamp` commands, plus opt-in advisory coverage artifacts in the GitHub and GitLab CI adapters.
+- Conformance evaluation checks and rubrics for semantic coverage reporting.
+
+### Changed
+
+- Full documentation generation and explicit semantic rescans now record reviewable capability coverage. Routine changes revisit only affected report entries.
+- Semantic coverage reports are ignored by documentation-impact classification, so updating a report alone cannot satisfy a guide-change requirement. Scan, preflight, and default CI enforcement remain unchanged.
+- Refreshed README onboarding copy and navigation.
+
 ## [0.11.1] - 2026-09-09
 
 ### Fixed

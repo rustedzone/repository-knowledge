@@ -23,12 +23,12 @@ Repository Knowledge gives the agent a route to the right files and an evidence 
 
 ## Get started
 
-Download the matching executable from the pinned [v0.11.1 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.11.1), verify its checksum and GitHub attestation, and put it on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) has platform-specific instructions. You also need the selected agent installed.
+Download the matching executable from the pinned [v0.12.0 release](https://github.com/rustedzone/repository-knowledge/releases/tag/v0.12.0), verify its checksum and GitHub attestation, and put it on `PATH` as `repo-knowledge`. The [installation guide](docs/installation.md#release-artifacts) has platform-specific instructions. You also need the selected agent installed.
 
 From the repository you want Codex to work in:
 
 ```bash
-repo-knowledge install --target . --agent codex --source https://github.com/rustedzone/repository-knowledge --ref v0.11.1
+repo-knowledge install --target . --agent codex --source https://github.com/rustedzone/repository-knowledge --ref v0.12.0
 repo-knowledge doctor --target .
 codex
 ```

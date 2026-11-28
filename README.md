@@ -45,6 +45,8 @@ To ask for human-readable documentation after installation, try:
 
 For an explicit semantic rescan, the agent can write a versioned `.repo-knowledge/semantic-coverage.json` with traced capabilities and exact gaps. Run `repo-knowledge coverage-check` to validate its paths and cited file fingerprints. A passing mechanical check does not establish that the behavioral analysis is correct. The report is optional, read on demand, and ignored by documentation-impact classification.
 
+For an existing repository, use the [copy-paste agent prompts](skills/repository-knowledge/references/semantic-coverage.md#copy-paste-prompts-for-an-installed-agent) to assess whether a change needs a full rescan or to request a full baseline directly. Routine bounded changes update only affected documentation and coverage entries.
+
 GitHub and GitLab CI can publish an advisory coverage artifact when explicitly enabled. The existing documentation-impact gate and preflight context are unchanged.
 
 ## A repository that tries to mislead the agent

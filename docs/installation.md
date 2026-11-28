@@ -169,6 +169,8 @@ repo-knowledge rebuild --target /path/to/service-repository
 Use repository-knowledge to generate comprehensive, human-readable documentation for this entire repository. Cover every applicable repository profile and material domain, feature, interface, data model, integration, and operational surface. Do not stop after scan, rebuild, or a shallow overview.
 ```
 
+After a material change, use the [agent prompt for deciding rescan scope](../skills/repository-knowledge/references/semantic-coverage.md#copy-paste-prompts-for-an-installed-agent). The same reference has a prompt for explicitly requesting a full semantic baseline. A bounded change needs only affected guide and coverage updates; an absent coverage report during routine work does not itself require a full rescan.
+
 Review `.repo-knowledge/rebuild-proposal.md`. If the optional structural appendix is useful, apply it with:
 
 ```bash

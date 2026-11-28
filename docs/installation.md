@@ -218,6 +218,7 @@ jobs:
     with:
       toolkit-version: v0.11.1
       enforcement: advisory
+      # semantic-coverage: true  # optional advisory JSON artifact
 ```
 
 Update `uses` and `toolkit-version` together. The workflow ref selects the CI orchestration; `toolkit-version` selects the checksummed and attested binary plus `repo-knowledge-github-adapter.sh` from GitHub Releases. The example uses the convenient release tag. Organizations requiring immutable workflow references should replace `@v0.11.1` with the full commit SHA for that release while retaining `toolkit-version: v0.11.1`.
@@ -236,6 +237,8 @@ The caller grants only `contents: read` and `attestations: read`. Reusable workf
 
 For unusual events, optional `base-sha` and `head-sha` inputs accept explicit 40- or 64-character Git object IDs. Those objects must already exist in the full checkout: the workflow deliberately does not persist credentials or fetch arbitrary caller-supplied objects. `retention-days` changes report retention. Start with `advisory`, then move to `acknowledgment` or `enforced` using the same rollout criteria as GitLab.
 
+Set `semantic-coverage: true` to publish a separate advisory `repository-knowledge-coverage` artifact. This opt-in check does not change documentation-impact enforcement or fail the job. A missing coverage report is recorded as `not_assessed`.
+
 ## GitLab CI
 
 Add this to the consuming `.gitlab-ci.yml`:
@@ -250,8 +253,11 @@ variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: "12345"
   REPO_KNOWLEDGE_TOOLKIT_VERSION: v0.11.1
   REPO_KNOWLEDGE_ENFORCEMENT: advisory
+  # REPO_KNOWLEDGE_SEMANTIC_COVERAGE: "true"  # optional advisory artifact
 ```
 
 `REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID` is the numeric GitLab project ID of the central toolkit. The consuming project must be allowed to download its Generic Package Registry artifacts with `CI_JOB_TOKEN`; configure the toolkit project's job-token allowlist when cross-project access is restricted.
 
 The job detects Linux `amd64` or `arm64`, downloads the pinned binary and `SHA256SUMS`, verifies the artifact, analyzes the merge-request or push diff, uploads a JSON report, and never commits changes. It uses full Git history for reliable diff-base access. Repositories with custom stages that omit `test` must override the included job's stage.
+
+Set `REPO_KNOWLEDGE_SEMANTIC_COVERAGE: "true"` to include `repository-knowledge-coverage.json` as a separate advisory artifact. It does not affect the job exit status.

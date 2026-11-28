@@ -49,6 +49,7 @@ Read when:
 Knowledge:
 - [Skill entrypoint](../skills/repository-knowledge/SKILL.md)
 - [Human-readable documentation generation](../skills/repository-knowledge/references/documentation-generation.md)
+- [Semantic coverage report and rescan](../skills/repository-knowledge/references/semantic-coverage.md)
 - [Documentation quality and implementation readiness](../skills/repository-knowledge/references/documentation-quality.md)
 - [Repository type profiles and coverage](../skills/repository-knowledge/references/repository-type-profiles.md)
 - [Claim-specific sources of truth](../skills/repository-knowledge/references/source-of-truth.md)

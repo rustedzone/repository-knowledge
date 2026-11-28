@@ -139,6 +139,19 @@ func dispatch(arguments []string, stdin io.Reader, stderr io.Writer) (commandOut
 			exitCode = 1
 		}
 		return commandOutcome{value: value, exitCode: exitCode, json: *jsonOutput}, err
+	case "coverage-check", "coverage-stamp":
+		flags := newFlagSet(command, stderr)
+		target := flags.String("target", ".", "repository root")
+		jsonOutput := flags.Bool("json", false, "emit machine-readable JSON")
+		if err := flags.Parse(args); err != nil {
+			return commandOutcome{json: *jsonOutput}, err
+		}
+		if command == "coverage-check" {
+			value, err := toolkit.CheckCoverage(*target)
+			return commandOutcome{value: value, json: *jsonOutput}, err
+		}
+		value, err := toolkit.StampCoverage(*target)
+		return commandOutcome{value: value, json: *jsonOutput}, err
 	case "hook-context":
 		flags := newFlagSet(command, stderr)
 		target := flags.String("target", ".", "repository path or a path nested below it")
@@ -300,6 +313,15 @@ func summarize(command string, value any) string {
 		return strings.Join(lines, "\n")
 	case toolkit.ScanState:
 		return fmt.Sprintf("scan complete: %d files, %d top-level modules, %d capability signals\nwrote .repo-knowledge/scan-state.json", result.FileCount, len(result.Modules), len(result.CapabilitySignals))
+	case toolkit.CoverageCheckResult:
+		lines := []string{fmt.Sprintf("semantic coverage: %s (%d units)", result.Status, result.Units)}
+		for _, finding := range result.Findings {
+			lines = append(lines, "- "+finding.ID+": "+finding.Message)
+		}
+		lines = append(lines, "mechanical checks do not verify behavioral accuracy")
+		return strings.Join(lines, "\n")
+	case toolkit.CoverageStampResult:
+		return fmt.Sprintf("stamped %d evidence files in %s; inspect the evidence before claiming a trace is current", result.Stamped, result.Path)
 	case toolkit.DoctorReport:
 		lines := []string{"doctor: " + result.Status}
 		for _, check := range result.Checks {
@@ -354,5 +376,5 @@ func summarize(command string, value any) string {
 func printUsage(output io.Writer) {
 	name := filepath.Base(os.Args[0])
 	fmt.Fprintf(output, "Usage: %s <command> [options]\n\n", name)
-	fmt.Fprintln(output, "Commands: install, update, scan, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, preflight-activate, preflight-gate, evidence-run, evidence-report, version")
+	fmt.Fprintln(output, "Commands: install, update, scan, coverage-check, coverage-stamp, doctor, audit, rebuild, impact, acknowledge, validate-doc-impact, hook-context, preflight-activate, preflight-gate, evidence-run, evidence-report, version")
 }

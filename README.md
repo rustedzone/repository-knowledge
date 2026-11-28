@@ -43,6 +43,10 @@ To ask for human-readable documentation after installation, try:
 
 `scan` and `rebuild` can help discover structure, but they do not write the semantic guides described in that request.
 
+For an explicit semantic rescan, the agent can write a versioned `.repo-knowledge/semantic-coverage.json` with traced capabilities and exact gaps. Run `repo-knowledge coverage-check` to validate its paths and cited file fingerprints. A passing mechanical check does not establish that the behavioral analysis is correct. The report is optional, read on demand, and ignored by documentation-impact classification.
+
+GitHub and GitLab CI can publish an advisory coverage artifact when explicitly enabled. The existing documentation-impact gate and preflight context are unchanged.
+
 ## A repository that tries to mislead the agent
 
 The [frontend onboarding benchmark](evals/benchmarks/frontend-onboarding/eval.json) includes plausible instructions that conflict with the fixture's implementation:
@@ -89,6 +93,7 @@ The toolkit can help agents verify claims; it cannot guarantee that an agent rea
 | --- | --- |
 | `install`, `update`, `doctor` | Set up or refresh selected adapters, then check the installation. |
 | `scan`, `audit`, `rebuild` | Discover repository structure, find knowledge gaps, and propose a generated inventory. |
+| `coverage-check`, `coverage-stamp` | Check an optional semantic coverage report and snapshot cited evidence after review. |
 | `impact`, `acknowledge`, `validate-doc-impact` | Classify changes and record or validate documentation-impact decisions. |
 | `hook-context`, `preflight-activate` | Supply agent context and activate an optional strict session. |
 | `evidence-run`, `evidence-report` | Bind checks, source references, and documentation decisions to current worktree content. |

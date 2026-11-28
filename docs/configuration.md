@@ -22,8 +22,10 @@
 | `.repo-knowledge/local-invariants.json` | Consumer | Repository-specific objective or semantic contracts. |
 | `.repo-knowledge/local-impact-rules.json` | Consumer | Additional globs, classifiers, and enforced mappings. |
 | `.repo-knowledge/scan-state.json` | Consumer-generated | Last structural inventory and module fingerprints. |
+| `.repo-knowledge/semantic-coverage.json` | Consumer | Optional versioned assessment of traced capabilities, source evidence, and known gaps. |
 | `.repo-knowledge/doc-impact.json` | Consumer-generated | Decision bound to the current material changed-path fingerprint. |
 | `.repo-knowledge/schemas/work-evidence.schema.json` | Toolkit | Interface for a strict-session completion receipt bound to current file content and successful checks. |
+| `.repo-knowledge/schemas/semantic-coverage.schema.json` | Toolkit | Interface for the optional semantic coverage report. |
 | `docs/**` | Consumer | Generated catalogs and maintained semantic knowledge. |
 
 The release binary is installed on developer machines and CI runners, not committed into the consuming repository. The managed skill includes platform bootstrap helpers so a clone with a missing command can recover its pinned binary after explicit user permission; those helpers remain toolkit-owned and their digests are recorded in the manifest.
@@ -31,6 +33,8 @@ The release binary is installed on developer machines and CI runners, not commit
 Toolkit-managed adapter rules and skills are excluded from structural scan inventory and ignored by default documentation-impact classification. A shared hook container is excluded from scan only when removing the toolkit entry leaves it empty; a container with consumer settings remains normal repository evidence. Hook containers are not blanket-ignored by documentation-impact classification because that would conceal consumer hook changes.
 
 The generated inventory is an optional structural appendix. Semantic guides, `docs/index.md`, and capability routes are consumer-owned knowledge maintained by agents and humans after evidence inspection. An empty `capabilities` list causes `audit` to report `no-knowledge-routes`.
+
+An explicit semantic rescan may add `.repo-knowledge/semantic-coverage.json`. `coverage-check` validates its structure, paths, and cited file digests; it does not judge the truth of a trace or detect every missing capability. The report is loaded on demand, not injected into preflight. A missing report is `not_assessed` and does not alter `audit`, `doctor`, or CI results. The report is ignored by documentation-impact classification so it cannot stand in for a guide change.
 
 ## Per-agent preflight modes
 

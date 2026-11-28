@@ -314,3 +314,28 @@ func TestRebuildSummaryDoesNotClaimSemanticDocumentation(t *testing.T) {
 		t.Fatalf("summarize(rebuild) output = %q", output)
 	}
 }
+
+func TestCoverageCommandsAreAdvisoryAndExplicit(t *testing.T) {
+	root := t.TempDir()
+	runGitForCLI(t, root, "init", "--quiet")
+	runGitForCLI(t, root, "config", "user.email", "test@example.invalid")
+	runGitForCLI(t, root, "config", "user.name", "CLI Test")
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"install", "--target", root}, &stdout, &stderr); code != 0 {
+		t.Fatalf("install code=%d stderr=%s", code, stderr.String())
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"coverage-check", "--target", root, "--json"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("missing coverage code=%d stderr=%s", code, stderr.String())
+	}
+	var result toolkit.CoverageCheckResult
+	if err := json.Unmarshal(stdout.Bytes(), &result); err != nil || result.Status != "not_assessed" {
+		t.Fatalf("missing coverage result=%+v err=%v", result, err)
+	}
+	stdout.Reset()
+	stderr.Reset()
+	if code := run([]string{"coverage-stamp", "--target", root}, &stdout, &stderr); code != 2 || !strings.Contains(stderr.String(), "does not exist") {
+		t.Fatalf("missing stamp code=%d stderr=%s", code, stderr.String())
+	}
+}

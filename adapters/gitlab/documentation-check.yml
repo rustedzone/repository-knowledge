@@ -3,6 +3,7 @@ variables:
   REPO_KNOWLEDGE_TOOLKIT_PROJECT_ID: ""
   REPO_KNOWLEDGE_TOOLKIT_VERSION: "v0.11.1"
   REPO_KNOWLEDGE_ENFORCEMENT: "advisory"
+  REPO_KNOWLEDGE_SEMANTIC_COVERAGE: "false"
 
 repository-knowledge:documentation-impact:
   stage: test
@@ -43,9 +44,18 @@ repository-knowledge:documentation-impact:
       VALIDATION_STATUS="$?"
       set -e
       cat repository-knowledge-impact.json
+      if [ "${REPO_KNOWLEDGE_SEMANTIC_COVERAGE}" = "true" ]; then
+        set +e
+        "${TOOLKIT_DIR}/${TOOLKIT_NAME}" coverage-check --target "${CI_PROJECT_DIR}" --json > repository-knowledge-coverage.json
+        COVERAGE_STATUS="$?"
+        set -e
+        cat repository-knowledge-coverage.json
+        echo "semantic coverage advisory check exit status: ${COVERAGE_STATUS}"
+      fi
       exit "${VALIDATION_STATUS}"
   artifacts:
     when: always
     expire_in: 14 days
     paths:
       - repository-knowledge-impact.json
+      - repository-knowledge-coverage.json

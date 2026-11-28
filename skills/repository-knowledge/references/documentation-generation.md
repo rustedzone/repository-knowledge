@@ -178,6 +178,7 @@ Before reporting success:
 2. Cross-check every current-state technical claim against its claim-specific authoritative evidence. Re-read manifests and lockfiles directly for framework, runtime, and dependency versions; do not validate those claims against existing prose.
 3. Compare the final library against every applicable row in the repository-type profiles. Cover it, mark it not applicable with evidence, or list it as a known gap.
 4. Confirm every material unit from the coverage plan appears in `docs/index.md` and `.repo-knowledge/repository.json` where the claim is verified.
+   For a full generation or explicit semantic rescan, record the inspected units and gaps in `.repo-knowledge/semantic-coverage.json` following [semantic-coverage.md](semantic-coverage.md), stamp inspected evidence, and run `repo-knowledge coverage-check`.
 5. Run `repo-knowledge audit` and address missing routes, broken links, and stale scan findings relevant to the request.
 6. Run a stale-prose review: compare relevant README, `CLAUDE.md`, `AGENTS.md`, prior generated docs, and comments with the new guides. Correct stale files inside the user-authorized documentation scope; report stale files outside that scope without copying their claims or silently rewriting them.
 7. Search generated prose for unsupported hedge language and review every occurrence using the anti-speculation gate.

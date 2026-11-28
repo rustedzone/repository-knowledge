@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/rustedzone/repository-knowledge/internal/toolkit"
 )
 
 func TestEvaluationSpecsLoad(t *testing.T) {
@@ -518,4 +520,18 @@ response.status(upstream.status).json(payload);
   "ci": {"enforcement": "advisory"}
 }
 `)
+	write(".repo-knowledge/semantic-coverage.json", `{
+  "schema_version": "1.0",
+  "scope": "full",
+  "units": [
+    {"id": "navigation", "status": "traced", "guide": "docs/architecture.md", "trace": "Open a protected page", "evidence": [{"path": "src/app/(protected)/layout.tsx", "symbol": "ProtectedLayout"}]},
+    {"id": "permissions", "status": "traced", "guide": "docs/architecture.md", "trace": "Check page permission", "evidence": [{"path": "src/auth/PermissionContext.tsx", "symbol": "useCheckPermission"}]},
+    {"id": "users", "status": "traced", "guide": "docs/features.md", "trace": "Submit user form", "evidence": [{"path": "src/features/users/UserForm.tsx", "symbol": "UserForm"}]},
+    {"id": "bff", "status": "traced", "guide": "docs/integrations.md", "trace": "Proxy API request", "evidence": [{"path": "src/pages/api/[...paths]/index.ts", "symbol": "handler"}]}
+  ]
+}
+`)
+	if _, err := toolkit.StampCoverage(target); err != nil {
+		t.Fatal(err)
+	}
 }

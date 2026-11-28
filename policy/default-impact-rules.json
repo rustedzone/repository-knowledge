@@ -11,6 +11,7 @@
     ".git/**",
     ".repo-knowledge/policy/**",
     ".repo-knowledge/scan-state.json",
+    ".repo-knowledge/semantic-coverage.json",
     ".repo-knowledge/rebuild-proposal.md",
     ".repo-knowledge/doc-impact.json",
     ".repo-knowledge/toolkit.json",

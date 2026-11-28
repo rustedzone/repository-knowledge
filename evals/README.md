@@ -12,8 +12,8 @@ The existing cases under `evals/cases/` explicitly ask the agent to use Reposito
 
 | Case | Primary regressions |
 | --- | --- |
-| `frontend-nextjs` | Stale React version, static data mislabeled as live integration, route guards, state ownership, form validation, BFF behavior, and source-derived examples. |
-| `backend-clean-architecture` | Package/controller cataloging, missing end-to-end trace, approval transitions, database versus application cleanup, trust boundaries, DI wiring, response conventions, and external synchronization. |
+| `frontend-nextjs` | Stale React version, static data mislabeled as live integration, route guards, state ownership, form validation, BFF behavior, source-derived examples, and semantic coverage reporting. |
+| `backend-clean-architecture` | Package/controller cataloging, missing end-to-end trace, approval transitions, database versus application cleanup, trust boundaries, DI wiring, response conventions, external synchronization, and semantic coverage reporting. |
 
 Strict preflight has a separate [manual regression protocol](strict-preflight.md). It uses a neutral Google SSO planning request and verifies the host hook/tool trace, which cannot be established by the fixture-based documentation grader alone. A strict-preflight release requires three passing fresh-task traces for each enabled host.
 

@@ -16,6 +16,8 @@ Run `repo-knowledge scan`. Scan builds structural discovery data from tracked pa
 
 Inspect source more deeply only for changed, unknown, or relevant modules. A detected capability is an inspection lead, not a verified architectural claim.
 
+For an explicit semantic rescan, inspect all material repository surfaces and follow [semantic-coverage.md](semantic-coverage.md). Record a versioned coverage report with traced flows and exact gaps. `coverage-check` performs mechanical validation; it cannot certify semantic correctness. Routine code changes need only revisit affected report entries when a report exists.
+
 ## Audit
 
 Run `repo-knowledge audit`. Audit checks installation health, configured documentation routes, index links, scan freshness, and (when a diff range is provided) documentation impact. Report contradictions with their evidence and claim state. Do not auto-resolve semantic conflicts.

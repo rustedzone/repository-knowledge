@@ -44,6 +44,6 @@
   },
   "ownership": {
     "toolkit": ["skill", "default_policy", "schemas", "validators", "release_binaries", "ci_templates"],
-    "consumer": ["repository_metadata", "local_rules", "domain_knowledge", "documentation", "adrs", "scan_state", "impact_acknowledgments"]
+    "consumer": ["repository_metadata", "local_rules", "domain_knowledge", "documentation", "adrs", "scan_state", "semantic_coverage", "impact_acknowledgments"]
   }
 }

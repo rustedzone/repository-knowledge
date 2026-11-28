@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "family": "conformance",
   "id": "frontend-nextjs",
-  "revision": "1",
+  "revision": "2",
   "source_commit": "821034760d0b6dfd52c3522b5eb195c18b7f0857",
   "description": "Next.js frontend documentation with stale prose, a static-intelligence trap, protected navigation, form state, and a BFF proxy.",
   "fixture": "fixture",
@@ -12,13 +12,19 @@
     "docs/**",
     ".repo-knowledge/repository.json",
     ".repo-knowledge/scan-state.json",
-    ".repo-knowledge/rebuild-proposal.md"
+    ".repo-knowledge/rebuild-proposal.md",
+    ".repo-knowledge/semantic-coverage.json"
   ],
   "checks": [
     {
       "id": "baseline-guides",
       "type": "paths_exist",
       "paths": ["docs/index.md", "docs/repository-overview.md", "docs/architecture.md"]
+    },
+    {
+      "id": "semantic-coverage-report",
+      "type": "paths_exist",
+      "paths": [".repo-knowledge/semantic-coverage.json"]
     },
     {
       "id": "semantic-doc-count",

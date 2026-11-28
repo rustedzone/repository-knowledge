@@ -113,6 +113,7 @@ git -C "${TARGET_REPOSITORY}" init
 ./repo-knowledge rebuild --target "${TARGET_REPOSITORY}"
 ./repo-knowledge rebuild --target "${TARGET_REPOSITORY}" --apply
 ./repo-knowledge audit --target "${TARGET_REPOSITORY}"
+./repo-knowledge coverage-check --target "${TARGET_REPOSITORY}"
 ```
 
 ## First real-repository scenarios
@@ -139,6 +140,7 @@ git -C "${TARGET_REPOSITORY}" init
 16. Run `rebuild --json` and confirm `artifact_kind` is `structural_inventory`, `semantic_documentation_complete` is false, and a semantic next step is present. Confirm the Markdown omits fingerprints and expands common source containers such as `src/app`.
 17. Run `audit` before adding routes and confirm it reports `no-knowledge-routes`; populate verified routes and confirm the warning clears.
 18. Make a code-only commit. Confirm advisory CI reports a missing decision but passes; switch to acknowledgment and confirm it fails.
+19. Add a semantic coverage report and confirm `coverage-check` finds missing or stale evidence. Stamp it after inspection, then confirm the checker passes. Confirm a missing report returns `not_assessed`, installation/update preserve the report, preflight payloads do not include it, and a code change with only a report edit still requires a guide change or impact acknowledgment.
 19. Run `acknowledge --impact not-required`, commit it, and confirm the same diff passes. Add another material path and confirm the stale fingerprint fails.
 20. Change code and relevant documentation together. Confirm acknowledgment mode passes without a no-impact file.
 21. Configure an enforced mapping such as `persistence -> docs/data/**`; verify an unrelated doc fails while a matching data doc passes.

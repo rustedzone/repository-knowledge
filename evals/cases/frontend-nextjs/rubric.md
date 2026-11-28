@@ -19,6 +19,7 @@ Critical items are marked **critical**. Passing requires every critical item to 
 | Source-derived examples | Yes | Are examples faithful, attributed to current paths/symbols, safe, and useful for distinct recurring patterns? |
 | First-change readiness | Yes | Could a newcomer add a protected form-backed page and its test without rediscovering the basic architecture from source? |
 | Honesty and gaps | No | Are unknowns explicit and are unused declarations distinguished from active integrations? |
+| Semantic coverage report | Yes | Does the versioned report account for material frontend capabilities, point to real guide traces and source or test evidence, and expose exact gaps without overstating verification? Does `coverage-check` report no mechanical findings beyond intentional partial coverage? |
 
 ## Optional polish observations
 

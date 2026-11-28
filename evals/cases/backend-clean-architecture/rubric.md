@@ -19,6 +19,7 @@ Critical items are marked **critical**. Passing requires every critical item to 
 | Data and consistency | No | Does it explain transaction boundaries, Redis use, persistence constraints, side effects, and consistency limitations established by source? |
 | First-change readiness | Yes | Could a newcomer add an approval transition or repository dependency and locate the correct tests without rediscovering the architecture? |
 | Honesty and gaps | No | Are unimplemented retries, recovery, or business meaning recorded as exact gaps instead of generic assumptions? |
+| Semantic coverage report | Yes | Does the versioned report account for material backend capabilities, point to real guide traces and source or test evidence, and expose exact gaps without overstating verification? Does `coverage-check` report no mechanical findings beyond intentional partial coverage? |
 
 ## Optional polish observations
 

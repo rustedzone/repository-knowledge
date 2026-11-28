@@ -27,6 +27,11 @@ on:
         required: false
         default: 14
         type: number
+      semantic-coverage:
+        description: Publish an advisory semantic coverage check when enabled
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -115,5 +120,26 @@ jobs:
         with:
           name: repository-knowledge-impact
           path: ${{ runner.temp }}/repository-knowledge-impact.json
+          if-no-files-found: warn
+          retention-days: ${{ inputs.retention-days }}
+
+      - name: Check semantic coverage (advisory)
+        if: always() && inputs.semantic-coverage
+        continue-on-error: true
+        shell: bash
+        env:
+          REPO_KNOWLEDGE_BINARY: ${{ steps.toolkit.outputs.binary }}
+          REPO_KNOWLEDGE_TARGET: ${{ github.workspace }}
+          REPO_KNOWLEDGE_COVERAGE_OUTPUT: ${{ runner.temp }}/repository-knowledge-coverage.json
+        run: |
+          "${REPO_KNOWLEDGE_BINARY}" coverage-check --target "${REPO_KNOWLEDGE_TARGET}" --json > "${REPO_KNOWLEDGE_COVERAGE_OUTPUT}"
+          cat "${REPO_KNOWLEDGE_COVERAGE_OUTPUT}"
+
+      - name: Upload semantic coverage report
+        if: always() && inputs.semantic-coverage
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: repository-knowledge-coverage
+          path: ${{ runner.temp }}/repository-knowledge-coverage.json
           if-no-files-found: warn
           retention-days: ${{ inputs.retention-days }}
